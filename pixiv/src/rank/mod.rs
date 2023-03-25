@@ -1,7 +1,5 @@
 use std::{ops::Range, fmt::Display};
 
-use crate::artworks::get_artworks_data;
-
 use self::rank_list::RankList;
 
 mod rank_list;
@@ -44,16 +42,19 @@ pub struct Rank {
     rank_type: RankType,
     is_r18: bool,
     download_range: Range<usize>,
-    download_list: Vec<usize>,
+    queue: Vec<usize>,
+    current: usize
 }
 
 impl Rank {
     pub fn new(rank_type: RankType, is_r18: bool, download_range: Range<usize>) -> Self {
+        let start = download_range.start;
         Self {
             rank_type,
             is_r18,
             download_range,
-            download_list: vec![],
+            queue: vec![],
+            current: (start / 50) * 50 + 1
         }
     }
 
@@ -62,25 +63,26 @@ impl Rank {
         format!("{}?mode={}{}&format=json&p={}", RANK_URI, self.rank_type, is_r18, page) 
     }
 
-    pub async fn get_download_list(&mut self) -> reqwest::Result<Vec<String>> {
-        let mut download_image_list: Vec<String> = vec![];
-
-        for p in (self.download_range.start / 50)..(self.download_range.end / 50) {
-            let response = reqwest::get(self.get_url(p + 1)).await?;
+    pub async fn next(&mut self) -> reqwest::Result<Option<usize>> {
+        if self.current > self.download_range.end {
+            Ok(None)
+        } else if self.queue.len() == 0 {
+            let response = reqwest::get(self.get_url((self.current / 50) + 1)).await?;
             if response.status() == 200 {
                 let mut data = response.json::<RankList>().await?;
-                let mut download_list: Vec<usize> = data.contents.iter_mut().map(|content| { content.illust_id }).collect();
-                self.download_list.append(&mut download_list);
+                let artworks_list: Vec<usize> = data.contents.iter_mut().map(|content| { content.illust_id }).collect();
+                let list = &mut artworks_list[(self.download_range.start - self.current)..].to_vec();
+                self.current = self.download_range.start;
+                let current_id = list.remove(0);
+                self.queue.append(list);
+                Ok(Some(current_id))
             } else {
-                break;
+               Ok(None) 
             }
+        } else {
+            self.current += 1;
+            Ok(Some(self.queue.remove(0))) 
         }
-
-        for id in &self.download_list {
-            download_image_list.append(&mut get_artworks_data(id.clone()).await?);
-        }
-
-        Ok(download_image_list)
     }
 }
 
@@ -90,11 +92,13 @@ mod rank_test {
 
     #[tokio::test]
     async fn test() {
-        let mut rank = Rank::new(super::RankType::Daily, false, 0..50);
-        let list = rank.get_download_list().await.unwrap();
-
-        for i in list {
-            println!("{}", &i);
-        }
+        let mut rank = Rank::new(super::RankType::Daily, false, 44..50);
+        loop {
+            if let Some(next) = rank.next().await.unwrap() {
+                println!("{}", next);                
+            } else {
+                break;
+            }
+        } 
     }
 }
