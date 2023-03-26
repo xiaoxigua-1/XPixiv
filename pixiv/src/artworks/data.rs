@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Artworks {
@@ -15,15 +15,15 @@ pub struct ArtworksData {
     pub title: String,
     pub description: String,
     #[serde(rename = "userName")]
-    pub user_name: String
+    pub user_name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ArtworkPages {
-    pub body: Vec<ArtworkPagesData>
+    pub body: Vec<ArtworkPagesData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ArtworkPagesData {
-    pub urls: HashMap<String, String>
+    pub urls: HashMap<String, String>,
 }

@@ -11,5 +11,5 @@ pub struct Content {
     pub illust_id: usize,
     pub url: String,
     pub user_name: String,
-    pub tags: Vec<String>
+    pub tags: Vec<String>,
 }

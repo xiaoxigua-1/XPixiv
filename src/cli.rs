@@ -1,7 +1,11 @@
-use std::{path::PathBuf, io::Write};
+use std::{io::Write, path::PathBuf};
 
-use clap::{Subcommand, Parser, Args};
-use pixiv::{rank::{Rank, RankType}, artworks::get_artworks_data, downloader::downloader};
+use clap::{Args, Parser, Subcommand};
+use pixiv::{
+    artworks::get_artworks_data,
+    downloader::downloader,
+    rank::{Rank, RankType},
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -31,7 +35,7 @@ pub struct RankArgs {
     rank_type: String,
 
     #[arg(short = 'g', long)]
-    path_group: Option<String>
+    path_group: Option<String>,
 }
 
 fn parse_agrs_type(s: &str) -> RankType {
@@ -46,12 +50,16 @@ fn parse_agrs_type(s: &str) -> RankType {
         "daily_ai" => DailyAI,
         "male" => Male,
         "femal" => Femal,
-        _ => Daily
+        _ => Daily,
     }
 }
 
 pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
-    let mut rank = Rank::new(parse_agrs_type(&args.rank_type), false, args.start..args.end);
+    let mut rank = Rank::new(
+        parse_agrs_type(&args.rank_type),
+        false,
+        args.start..args.end,
+    );
     loop {
         let next = rank.next().await?;
         if let Some(id) = next {
@@ -68,10 +76,18 @@ pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
             std::io::stdout().flush().unwrap();
             for (index, url) in images.images.iter().enumerate() {
                 let path_clone = path.clone();
-                let image_name = format!("{}-{}-{}.{}", images.title, id, index, &url[url.len() - 3..]);
+                let image_name = format!(
+                    "{}-{}-{}.{}",
+                    images.title,
+                    id,
+                    index,
+                    &url[url.len() - 3..]
+                );
                 let url_clone = url.clone();
                 let task = tokio::spawn(async move {
-                    downloader(path_clone.join(&image_name), url_clone).await.unwrap();
+                    downloader(path_clone.join(&image_name), url_clone)
+                        .await
+                        .unwrap();
                 });
                 qu.push(task);
             }

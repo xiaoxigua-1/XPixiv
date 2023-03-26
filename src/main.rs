@@ -1,16 +1,16 @@
 use clap::Parser;
-use cli::{Cli, Commands, rank_downloader};
+use cli::{rank_downloader, Cli, Commands};
 
 mod cli;
 
 #[tokio::main]
 async fn main() -> pixiv::Result<()> {
     if std::env::args().len() == 1 {
-        tui(); 
+        tui();
     } else {
         let cli = Cli::parse();
         match &cli.command {
-            Commands::Rank(args) => rank_downloader(args).await?, 
+            Commands::Rank(args) => rank_downloader(args).await?,
             _ => {}
         }
     }

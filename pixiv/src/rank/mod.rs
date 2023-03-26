@@ -1,4 +1,4 @@
-use std::{ops::Range, fmt::Display};
+use std::{fmt::Display, ops::Range};
 
 use self::rank_list::RankList;
 
@@ -14,7 +14,7 @@ pub enum RankType {
     Original,
     DailyAI,
     Male,
-    Femal
+    Femal,
 }
 
 impl Display for RankType {
@@ -32,9 +32,9 @@ impl Display for RankType {
                 Original => "original",
                 DailyAI => "daily_ai",
                 Male => "male",
-                Femal => "femal"
+                Femal => "femal",
             }
-        )   
+        )
     }
 }
 
@@ -43,7 +43,7 @@ pub struct Rank {
     is_r18: bool,
     download_range: Range<usize>,
     queue: Vec<usize>,
-    current: usize
+    current: usize,
 }
 
 impl Rank {
@@ -54,13 +54,16 @@ impl Rank {
             is_r18,
             download_range,
             queue: vec![],
-            current: (start / 50) * 50 + 1
+            current: (start / 50) * 50 + 1,
         }
     }
 
     fn get_url(&self, page: usize) -> String {
         let is_r18 = if self.is_r18 { "_r18" } else { "" };
-        format!("{}?mode={}{}&format=json&p={}", RANK_URI, self.rank_type, is_r18, page) 
+        format!(
+            "{}?mode={}{}&format=json&p={}",
+            RANK_URI, self.rank_type, is_r18, page
+        )
     }
 
     pub async fn next(&mut self) -> reqwest::Result<Option<usize>> {
@@ -71,17 +74,22 @@ impl Rank {
             if response.status() == 200 {
                 self.current = self.download_range.start;
                 let mut data = response.json::<RankList>().await?;
-                let artworks_list: Vec<usize> = data.contents.iter_mut().map(|content| { content.illust_id }).collect();
-                let list = &mut artworks_list[(self.download_range.start - self.current)..].to_vec();
+                let artworks_list: Vec<usize> = data
+                    .contents
+                    .iter_mut()
+                    .map(|content| content.illust_id)
+                    .collect();
+                let list =
+                    &mut artworks_list[(self.download_range.start - self.current)..].to_vec();
                 let current_id = list.remove(0);
                 self.queue.append(list);
                 Ok(Some(current_id))
             } else {
-               Ok(None) 
+                Ok(None)
             }
         } else {
             self.current += 1;
-            Ok(Some(self.queue.remove(0))) 
+            Ok(Some(self.queue.remove(0)))
         }
     }
 }
@@ -95,10 +103,10 @@ mod rank_test {
         let mut rank = Rank::new(super::RankType::Daily, false, 44..50);
         loop {
             if let Some(next) = rank.next().await.unwrap() {
-                println!("{}", next);                
+                println!("{}", next);
             } else {
                 break;
             }
-        } 
+        }
     }
 }
