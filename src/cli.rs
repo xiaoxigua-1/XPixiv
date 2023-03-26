@@ -61,10 +61,9 @@ pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
         args.start..args.end,
     );
     loop {
-        let next = rank.next().await?;
-        if let Some(id) = next {
+        if let Some(id) = rank.next().await? {
             let mut qu: Vec<tokio::task::JoinHandle<()>> = vec![];
-            let images = get_artworks_data(id).await?;
+            let images = get_artworks_data(id.illust_id).await?;
             let mut path = PathBuf::from(&args.path);
             if let Some(group) = &args.path_group {
                 match group.as_str() {
@@ -72,14 +71,16 @@ pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
                     _ => {}
                 }
             }
+
             print!("\r{} Downloading", images.title);
+
             std::io::stdout().flush().unwrap();
             for (index, url) in images.images.iter().enumerate() {
                 let path_clone = path.clone();
                 let image_name = format!(
                     "{}-{}-{}.{}",
                     images.title,
-                    id,
+                    id.illust_id,
                     index,
                     &url[url.len() - 3..]
                 );

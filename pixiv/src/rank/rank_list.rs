@@ -8,6 +8,7 @@ pub struct RankList {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Content {
+    pub title: String,
     pub illust_id: usize,
     pub url: String,
     pub user_name: String,

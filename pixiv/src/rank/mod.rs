@@ -1,8 +1,8 @@
 use std::{fmt::Display, ops::Range};
 
-use self::rank_list::RankList;
+use self::rank_list::{Content, RankList};
 
-mod rank_list;
+pub mod rank_list;
 
 const RANK_URI: &str = "https://www.pixiv.net/ranking.php";
 
@@ -42,7 +42,7 @@ pub struct Rank {
     rank_type: RankType,
     is_r18: bool,
     download_range: Range<usize>,
-    queue: Vec<usize>,
+    queue: Vec<Content>,
     current: usize,
 }
 
@@ -66,21 +66,16 @@ impl Rank {
         )
     }
 
-    pub async fn next(&mut self) -> reqwest::Result<Option<usize>> {
+    pub async fn next(&mut self) -> reqwest::Result<Option<Content>> {
         if self.current > self.download_range.end {
             Ok(None)
         } else if self.queue.len() == 0 {
             let response = reqwest::get(self.get_url((self.current / 50) + 1)).await?;
             if response.status() == 200 {
                 self.current = self.download_range.start;
-                let mut data = response.json::<RankList>().await?;
-                let artworks_list: Vec<usize> = data
-                    .contents
-                    .iter_mut()
-                    .map(|content| content.illust_id)
-                    .collect();
+                let data = response.json::<RankList>().await?;
                 let list =
-                    &mut artworks_list[(self.download_range.start - self.current)..].to_vec();
+                    &mut data.contents[(self.download_range.start - self.current)..].to_vec();
                 let current_id = list.remove(0);
                 self.queue.append(list);
                 Ok(Some(current_id))
@@ -103,7 +98,7 @@ mod rank_test {
         let mut rank = Rank::new(super::RankType::Daily, false, 44..50);
         loop {
             if let Some(next) = rank.next().await.unwrap() {
-                println!("{}", next);
+                println!("{:?}", next);
             } else {
                 break;
             }
