@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, io::Write};
 
 use clap::{Subcommand, Parser, Args};
 use pixiv::{rank::{Rank, RankType}, artworks::get_artworks_data, downloader::downloader};
@@ -55,6 +55,7 @@ pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
     loop {
         let next = rank.next().await?;
         if let Some(id) = next {
+            let mut qu: Vec<tokio::task::JoinHandle<()>> = vec![];
             let images = get_artworks_data(id).await?;
             let mut path = PathBuf::from(&args.path);
             if let Some(group) = &args.path_group {
@@ -63,9 +64,20 @@ pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
                     _ => {}
                 }
             }
+            print!("\r{} Downloading", images.title);
+            std::io::stdout().flush().unwrap();
             for (index, url) in images.images.iter().enumerate() {
+                let path_clone = path.clone();
                 let image_name = format!("{}-{}-{}.{}", images.title, id, index, &url[url.len() - 3..]);
-                downloader(path.join(&image_name), url.clone()).await?;
+                let url_clone = url.clone();
+                let task = tokio::spawn(async move {
+                    downloader(path_clone.join(&image_name), url_clone).await.unwrap();
+                });
+                qu.push(task);
+            }
+
+            for task in qu {
+                task.await.unwrap();
             }
         } else {
             break;
