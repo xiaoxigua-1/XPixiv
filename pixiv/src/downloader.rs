@@ -1,9 +1,12 @@
-use std::{path::PathBuf, fs::File, io::Write};
+use std::{path::PathBuf, fs::{File, create_dir_all}, io::Write};
 
 pub async fn downloader(path: PathBuf, url: String) -> reqwest::Result<()> {
+    create_dir_all(path.parent().unwrap()).unwrap();
+   
     let client = reqwest::Client::new();
     let mut file = File::create(path);
     let response = client.get(url).header("referer", "https://www.pixiv.net/").send().await?;
+    
     if let Ok(file) = &mut file {
         let bytes = &response.bytes().await?[..]; 
         file.write(bytes).unwrap();

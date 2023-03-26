@@ -69,10 +69,10 @@ impl Rank {
         } else if self.queue.len() == 0 {
             let response = reqwest::get(self.get_url((self.current / 50) + 1)).await?;
             if response.status() == 200 {
+                self.current = self.download_range.start;
                 let mut data = response.json::<RankList>().await?;
                 let artworks_list: Vec<usize> = data.contents.iter_mut().map(|content| { content.illust_id }).collect();
                 let list = &mut artworks_list[(self.download_range.start - self.current)..].to_vec();
-                self.current = self.download_range.start;
                 let current_id = list.remove(0);
                 self.queue.append(list);
                 Ok(Some(current_id))

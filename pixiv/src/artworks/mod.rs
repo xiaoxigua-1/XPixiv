@@ -22,7 +22,6 @@ pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
 
 pub async fn get_artworks_image_data(id: usize) -> reqwest::Result<Vec<String>> {
     let mut data = reqwest::get(format!("https://www.pixiv.net/ajax/illust/{}/pages", id)).await?.json::<ArtworkPages>().await?;
-    println!("{:?}", data);
     let images = data.body.iter_mut().map(|image| { image.urls.get("original").unwrap().to_string() }).collect();
     Ok(images)
 }
