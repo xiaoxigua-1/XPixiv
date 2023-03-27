@@ -155,7 +155,7 @@ impl<'a> RankState<'a> {
         self.rank_list_state.select(i);
     }
 
-    fn get_data(&mut self) {
+    pub fn get_data(&mut self) {
         self.rank_list_state.select(Some(0));
         for task in &self.qu {
             task.abort();
@@ -280,11 +280,13 @@ impl<'a> Compose for RankState<'a> {
 
     fn update(&mut self, key_event: KeyEvent) {
         match key_event.code {
-            KeyCode::Tab => self.tabs_next(),
+            KeyCode::Tab => {
+                self.get_data();
+                self.tabs_next();
+            },
             KeyCode::BackTab => self.tabs_prev(),
             KeyCode::Down => self.list_next(),
             KeyCode::Up => self.list_prev(),
-            KeyCode::Enter => self.get_data(),
             _ => {}
         }
     }

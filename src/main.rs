@@ -49,9 +49,10 @@ fn tui() -> Result<(), io::Error> {
         ListItem::new("Rank Downloader"),
         ListItem::new("Artworks Downloader"),
     ]);
-    let rank_downloader_state = RankState::new(vec![
+    let mut rank_downloader_state = RankState::new(vec![
         "daily", "weekly", "monthly", "rookie", "original", "daily_ai", "male", "female",
     ]);
+    rank_downloader_state.get_data();
     let mut contents: Vec<Box<dyn Compose>> = vec![Box::new(rank_downloader_state)];
 
     app_state.init();
