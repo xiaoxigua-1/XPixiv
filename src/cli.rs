@@ -38,7 +38,7 @@ pub struct RankArgs {
     path_group: Option<String>,
 }
 
-fn parse_agrs_type(s: &str) -> RankType {
+pub fn parse_agrs_type(s: &str) -> RankType {
     use RankType::*;
 
     match s {
@@ -49,7 +49,7 @@ fn parse_agrs_type(s: &str) -> RankType {
         "original" => Original,
         "daily_ai" => DailyAI,
         "male" => Male,
-        "femal" => Femal,
+        "female" => Female,
         _ => Daily,
     }
 }

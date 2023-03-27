@@ -12,7 +12,7 @@ use tui::{
     widgets::ListItem,
     Terminal,
 };
-use ui_util::{AppState, RankState};
+use ui_util::{AppState, Compose, RankState};
 
 mod cli;
 mod ui_util;
@@ -49,9 +49,10 @@ fn tui() -> Result<(), io::Error> {
         ListItem::new("Rank Downloader"),
         ListItem::new("Artworks Downloader"),
     ]);
-    let mut rank_downloader_state = RankState::new(vec![
-        "daily", "weekly", "monthly", "rookie", "original", "daily_ai", "male", "femal",
+    let rank_downloader_state = RankState::new(vec![
+        "daily", "weekly", "monthly", "rookie", "original", "daily_ai", "male", "female",
     ]);
+    let mut contents: Vec<Box<dyn Compose>> = vec![Box::new(rank_downloader_state)];
 
     app_state.init();
 
@@ -69,14 +70,8 @@ fn tui() -> Result<(), io::Error> {
                         if app_state.focus {
                             ui_util::update(&mut app_state, key.code);
                         } else {
-                            match app_state.current() {
-                                0 => {
-                                    ui_util::rank_downloader_update(
-                                        &mut rank_downloader_state,
-                                        key,
-                                    );
-                                }
-                                _ => {}
+                            if app_state.current() < contents.len() {
+                                contents[app_state.current()].update(key);
                             }
                         }
                     }
@@ -89,18 +84,12 @@ fn tui() -> Result<(), io::Error> {
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(15), Constraint::Percentage(80)].as_ref())
                 .split(f.size());
+            // render menu
             ui_util::ui(f, &mut app_state, chunks[0]);
 
-            match app_state.current() {
-                0 => {
-                    ui_util::rank_downloader_ui(
-                        f,
-                        &mut app_state,
-                        &mut rank_downloader_state,
-                        chunks[1],
-                    );
-                }
-                _ => {}
+            // render contents
+            if app_state.current() < contents.len() {
+                contents[app_state.current()].render(f, &mut app_state, chunks[1]);
             }
         })?;
     }

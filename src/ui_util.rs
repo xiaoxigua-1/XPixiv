@@ -1,13 +1,32 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use std::{
+    io::Stdout,
+    sync::{Arc, RwLock},
+};
+
+use crossterm::event::{KeyCode, KeyEvent};
 use pixiv::rank::rank_list::Content;
+use tokio::task::JoinHandle;
 use tui::{
-    backend::Backend,
-    layout::Rect,
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::Spans,
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Tabs},
     Frame,
 };
+
+use crate::cli::parse_agrs_type;
+
+pub trait Compose {
+    fn render(
+        &mut self,
+        f: &mut Frame<CrosstermBackend<Stdout>>,
+        app_state: &mut AppState,
+        area: Rect,
+    );
+
+    fn update(&mut self, key_event: KeyEvent);
+}
 
 pub struct AppState<'a> {
     menu: Vec<ListItem<'a>>,
@@ -17,9 +36,10 @@ pub struct AppState<'a> {
 
 pub struct RankState<'a> {
     tabs_index: usize,
-    rank_index: usize,
-    rank_list: Vec<Content>,
+    rank_list_state: ListState,
+    rank_list: Arc<RwLock<Vec<Content>>>,
     tabs: Vec<&'a str>,
+    qu: Vec<JoinHandle<()>>
 }
 
 impl<'a> AppState<'a> {
@@ -65,6 +85,7 @@ impl<'a> AppState<'a> {
             }
             None => 0,
         };
+
         self.menu_state.select(Some(i));
     }
 }
@@ -73,9 +94,10 @@ impl<'a> RankState<'a> {
     pub fn new(tabs: Vec<&'a str>) -> Self {
         Self {
             tabs_index: 0,
-            rank_index: 0,
-            rank_list: vec![],
+            rank_list_state: ListState::default(),
+            rank_list: Arc::new(RwLock::new(vec![])),
             tabs,
+            qu: vec![]
         }
     }
 
@@ -94,6 +116,69 @@ impl<'a> RankState<'a> {
             self.tabs_index - 1
         };
     }
+
+    fn list_next(&mut self) {
+        let i = match self.rank_list_state.selected() {
+            Some(i) => Some(if i >= self.rank_list.read().unwrap().len() - 1 {
+                0
+            } else {
+                i + 1
+            }),
+            None => {
+                if self.rank_list.read().unwrap().len() == 0 {
+                    None
+                } else {
+                    Some(0)
+                }
+            }
+        };
+
+        self.rank_list_state.select(i);
+    }
+
+    fn list_prev(&mut self) {
+        let i = match self.rank_list_state.selected() {
+            Some(i) => Some(if i == 0 {
+                self.rank_list.read().unwrap().len() - 1
+            } else {
+                i - 1
+            }),
+            None => {
+                if self.rank_list.read().unwrap().len() == 0 {
+                    None
+                } else {
+                    Some(0)
+                }
+            }
+        };
+
+        self.rank_list_state.select(i);
+    }
+
+    fn get_data(&mut self) {
+        self.rank_list_state.select(Some(0));
+        for task in &self.qu {
+            task.abort();
+        }
+
+        let rank_list_clone = self.rank_list.clone();
+        let rank_type = parse_agrs_type(self.tabs[self.tabs_index]);
+
+        let task = tokio::spawn(async move {
+            rank_list_clone.write().unwrap().clear();
+            let mut rank =
+                pixiv::rank::Rank::new(rank_type, false, 1..500);
+            loop {
+                if let Some(content) = rank.next().await.unwrap() {
+                    rank_list_clone.write().unwrap().push(content);
+                } else {
+                    break;
+                } 
+            }
+        });
+
+        self.qu.push(task);
+    }
 }
 
 pub fn ui<B: Backend>(f: &mut Frame<B>, state: &mut AppState, area: Rect) {
@@ -103,6 +188,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, state: &mut AppState, area: Rect) {
     } else {
         border_style
     };
+
     // Menu
     let list = List::new(state.menu.clone())
         .block(
@@ -115,54 +201,92 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, state: &mut AppState, area: Rect) {
         .style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_style(
             Style::default()
-                .add_modifier(Modifier::ITALIC)
+                .add_modifier(Modifier::BOLD)
                 .bg(Color::Gray),
         )
         .highlight_symbol("> ");
     f.render_stateful_widget(list, area, &mut state.menu_state);
 }
 
-pub fn rank_downloader_ui<B: Backend>(
-    f: &mut Frame<B>,
-    app_state: &mut AppState,
-    state: &mut RankState,
-    area: Rect,
-) {
-    let border_style = Style::default();
-    let border_style = if !app_state.focus {
-        border_style.fg(Color::White)
-    } else {
-        border_style
-    };
-    let tabs = Tabs::new(
-        state
-            .tabs
-            .iter()
-            .map(|tab| Spans::from(tab.clone()))
-            .collect(),
-    )
-    .select(state.tabs_index)
-    .style(Style::default())
-    .block(
-        Block::default()
-            .title(format!("{} rank list", state.tabs[state.tabs_index]))
-            .borders(Borders::ALL)
-            .border_style(border_style)
-            .border_type(BorderType::Rounded),
-    )
-    .highlight_style(
-        Style::default()
-            .bg(Color::Gray)
-            .add_modifier(Modifier::BOLD),
-    );
-    f.render_widget(tabs, area);
-}
+impl<'a> Compose for RankState<'a> {
+    fn render(
+        &mut self,
+        f: &mut Frame<CrosstermBackend<Stdout>>,
+        app_state: &mut AppState,
+        area: Rect,
+    ) {
+        let border_style = Style::default();
+        let border_style = if !app_state.focus {
+            border_style.fg(Color::White)
+        } else {
+            border_style
+        };
+        let check = Layout::default()
+            .direction(tui::layout::Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+            .split(area);
+        let tabs = Tabs::new(
+            self.tabs
+                .iter()
+                .map(|tab| Spans::from(tab.clone()))
+                .collect(),
+        )
+        .select(self.tabs_index)
+        .style(Style::default())
+        .block(
+            Block::default()
+                .title(format!("{} rank list", self.tabs[self.tabs_index]))
+                .borders(Borders::ALL)
+                .border_style(border_style)
+                .border_type(BorderType::Rounded),
+        )
+        .highlight_style(
+            Style::default()
+                .bg(Color::Gray)
+                .add_modifier(Modifier::BOLD),
+        );
 
-pub fn rank_downloader_update(state: &mut RankState, key_event: KeyEvent) {
-    match key_event.code {
-        KeyCode::Tab => state.tabs_next(),
-        KeyCode::BackTab => state.tabs_prev(),
-        _ => {}
+
+        let list = List::new(
+            self.rank_list
+                .read()
+                .unwrap()
+                .iter()
+                .enumerate()
+                .map(|(index, content)| {
+                    ListItem::new(format!(
+                        "{: <3} |{} https://www.pixiv.net/artworks/{}",
+                        index + 1, content.title, content.illust_id
+                    ))
+                })
+                .collect::<Vec<ListItem>>(),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(border_style)
+                .border_type(BorderType::Rounded),
+        )
+        .style(Style::default().add_modifier(Modifier::BOLD))
+        .highlight_style(
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .bg(Color::Gray),
+        );
+
+        f.render_stateful_widget(list, check[1], &mut self.rank_list_state);
+        f.render_widget(tabs, check[0]);
+    }
+
+    fn update(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Tab => self.tabs_next(),
+            KeyCode::BackTab => self.tabs_prev(),
+            KeyCode::Down => self.list_next(),
+            KeyCode::Up => self.list_prev(),
+            KeyCode::Enter => self.get_data(),
+            _ => {}
+        }
     }
 }
 

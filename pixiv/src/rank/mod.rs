@@ -14,7 +14,7 @@ pub enum RankType {
     Original,
     DailyAI,
     Male,
-    Femal,
+    Female,
 }
 
 impl Display for RankType {
@@ -32,7 +32,7 @@ impl Display for RankType {
                 Original => "original",
                 DailyAI => "daily_ai",
                 Male => "male",
-                Femal => "femal",
+                Female => "female",
             }
         )
     }
@@ -54,7 +54,7 @@ impl Rank {
             is_r18,
             download_range,
             queue: vec![],
-            current: (start / 50) * 50 + 1,
+            current: start,
         }
     }
 
@@ -67,15 +67,18 @@ impl Rank {
     }
 
     pub async fn next(&mut self) -> reqwest::Result<Option<Content>> {
-        if self.current > self.download_range.end {
+        self.current += 1;
+        if self.current - 1 > self.download_range.end {
             Ok(None)
         } else if self.queue.len() == 0 {
             let response = reqwest::get(self.get_url((self.current / 50) + 1)).await?;
             if response.status() == 200 {
-                self.current = self.download_range.start;
                 let data = response.json::<RankList>().await?;
-                let list =
-                    &mut data.contents[(self.download_range.start - self.current)..].to_vec();
+                let list = &mut if self.download_range.start > self.current {
+                    data.contents[(self.download_range.start - self.current)..].to_vec()
+                } else {
+                    data.contents
+                };
                 let current_id = list.remove(0);
                 self.queue.append(list);
                 Ok(Some(current_id))
@@ -83,7 +86,6 @@ impl Rank {
                 Ok(None)
             }
         } else {
-            self.current += 1;
             Ok(Some(self.queue.remove(0)))
         }
     }
@@ -95,13 +97,15 @@ mod rank_test {
 
     #[tokio::test]
     async fn test() {
-        let mut rank = Rank::new(super::RankType::Daily, false, 44..50);
+        let mut rank = Rank::new(super::RankType::Daily, false, 44..66);
+        let mut index = 0;
         loop {
             if let Some(next) = rank.next().await.unwrap() {
-                println!("{:?}", next);
+                index += 1;
             } else {
                 break;
             }
         }
+        println!("{} {}", index, 23);
     }
 }
