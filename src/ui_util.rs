@@ -39,7 +39,7 @@ pub struct RankState<'a> {
     rank_list_state: ListState,
     rank_list: Arc<RwLock<Vec<Content>>>,
     tabs: Vec<&'a str>,
-    qu: Vec<JoinHandle<()>>
+    qu: Vec<JoinHandle<()>>,
 }
 
 impl<'a> AppState<'a> {
@@ -97,7 +97,7 @@ impl<'a> RankState<'a> {
             rank_list_state: ListState::default(),
             rank_list: Arc::new(RwLock::new(vec![])),
             tabs,
-            qu: vec![]
+            qu: vec![],
         }
     }
 
@@ -166,14 +166,13 @@ impl<'a> RankState<'a> {
 
         let task = tokio::spawn(async move {
             rank_list_clone.write().unwrap().clear();
-            let mut rank =
-                pixiv::rank::Rank::new(rank_type, false, 1..500);
+            let mut rank = pixiv::rank::Rank::new(rank_type, false, 1..500);
             loop {
                 if let Some(content) = rank.next().await.unwrap() {
                     rank_list_clone.write().unwrap().push(content);
                 } else {
                     break;
-                } 
+                }
             }
         });
 
@@ -246,7 +245,6 @@ impl<'a> Compose for RankState<'a> {
                 .add_modifier(Modifier::BOLD),
         );
 
-
         let list = List::new(
             self.rank_list
                 .read()
@@ -256,7 +254,9 @@ impl<'a> Compose for RankState<'a> {
                 .map(|(index, content)| {
                     ListItem::new(format!(
                         "{: <3} |{} https://www.pixiv.net/artworks/{}",
-                        index + 1, content.title, content.illust_id
+                        index + 1,
+                        content.title,
+                        content.illust_id
                     ))
                 })
                 .collect::<Vec<ListItem>>(),
@@ -283,8 +283,12 @@ impl<'a> Compose for RankState<'a> {
             KeyCode::Tab => {
                 self.get_data();
                 self.tabs_next();
+            }
+            KeyCode::BackTab => {
+                self.get_data();
+                self.tabs_prev();
             },
-            KeyCode::BackTab => self.tabs_prev(),
+            KeyCode::Enter => todo!(),
             KeyCode::Down => self.list_next(),
             KeyCode::Up => self.list_prev(),
             _ => {}

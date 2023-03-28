@@ -4,7 +4,12 @@ use std::{
     path::PathBuf,
 };
 
-pub async fn downloader(path: PathBuf, url: String) -> reqwest::Result<()> {
+use futures_util::StreamExt;
+
+pub async fn downloader<F>(path: PathBuf, url: String, progress: F) -> reqwest::Result<()>
+where
+    F: Fn(u64, u64),
+{
     create_dir_all(path.parent().unwrap()).unwrap();
 
     let client = reqwest::Client::new();
@@ -14,10 +19,17 @@ pub async fn downloader(path: PathBuf, url: String) -> reqwest::Result<()> {
         .header("referer", "https://www.pixiv.net/")
         .send()
         .await?;
+    let total_size = response.content_length().unwrap();
 
     if let Ok(file) = &mut file {
-        let bytes = &response.bytes().await?[..];
-        file.write(bytes).unwrap();
+        let mut byte_stream = response.bytes_stream();
+        let mut now_size: u64 = 0;
+        while let Some(byte) = byte_stream.next().await {
+            let byte = byte?;
+            now_size += byte.len() as u64;
+            progress(now_size, total_size);
+            file.write(&byte[..]).unwrap();
+        }
     }
 
     Ok(())
@@ -34,6 +46,7 @@ mod test {
         downloader(
             PathBuf::new(),
             "https://i.pximg.net/img-original/img/2023/03/23/00/05/02/106465672_p0.png".to_string(),
+            |_, _| {},
         )
         .await?;
         Ok(())
