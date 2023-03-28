@@ -3,12 +3,12 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, Event, MouseEventKind};
 use pixiv::rank::rank_list::Content;
 use tokio::task::JoinHandle;
 use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Layout, Rect},
+    backend::CrosstermBackend,
+    layout::{Constraint, Layout, Rect, Direction},
     style::{Color, Modifier, Style},
     text::Spans,
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Tabs},
@@ -21,16 +21,19 @@ pub trait Compose {
     fn render(
         &mut self,
         f: &mut Frame<CrosstermBackend<Stdout>>,
-        app_state: &mut AppState,
+        focus: bool,
         area: Rect,
     );
 
-    fn update(&mut self, key_event: KeyEvent);
+    fn update(&mut self, event: &Event);
+
+    fn init(&mut self);
 }
 
 pub struct AppState<'a> {
     menu: Vec<ListItem<'a>>,
     menu_state: ListState,
+    pub contents: Vec<Box<dyn Compose>>,
     pub focus: bool,
 }
 
@@ -43,20 +46,20 @@ pub struct RankState<'a> {
 }
 
 impl<'a> AppState<'a> {
-    pub fn new(menu: Vec<ListItem<'a>>) -> Self {
+    pub fn new(menu: Vec<ListItem<'a>>, contents: Vec<Box<dyn Compose>>) -> Self {
         Self {
             menu,
             menu_state: ListState::default(),
             focus: true,
+            contents
         }
-    }
-
-    pub fn current(&self) -> usize {
-        self.menu_state.selected().unwrap()
     }
 
     pub fn init(&mut self) {
         self.menu_state.select(Some(0));
+        self.contents.iter_mut().for_each(|content| {
+            content.init();
+        });
     }
 
     fn next(&mut self) {
@@ -87,6 +90,58 @@ impl<'a> AppState<'a> {
         };
 
         self.menu_state.select(Some(i));
+    }
+
+    pub fn update(&mut self, event: &Event) {
+        if self.focus {
+            if let Event::Key(key_event) = event {
+                match key_event.code {
+                    KeyCode::Down => self.next(),
+                    KeyCode::Up => self.prev(),
+                    _ => {}
+                }
+            }
+        } else {
+            if let Some(content) = self.contents.get_mut(self.menu_state.selected().unwrap()) {
+                content.update(event);
+            }
+        }
+    }
+
+    pub fn ui(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(15), Constraint::Percentage(80)].as_ref())
+            .split(f.size());
+        let border_style = Style::default();
+        let border_style = if self.focus {
+            border_style.fg(Color::White)
+        } else {
+            border_style
+        };
+
+        // Menu
+        let list = List::new(self.menu.clone())
+            .block(
+                Block::default()
+                    .title("Menu")
+                    .borders(Borders::ALL)
+                    .border_style(border_style)
+                    .border_type(BorderType::Rounded),
+            )
+            .style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .bg(Color::Gray),
+            )
+            .highlight_symbol("> ");
+        f.render_stateful_widget(list, chunks[0], &mut self.menu_state);
+
+        let index = self.menu_state.selected().unwrap(); 
+        if let Some(content) = self.contents.get_mut(index) {
+            content.render(f, self.focus, chunks[1]);
+        }
     }
 }
 
@@ -180,42 +235,16 @@ impl<'a> RankState<'a> {
     }
 }
 
-pub fn ui<B: Backend>(f: &mut Frame<B>, state: &mut AppState, area: Rect) {
-    let border_style = Style::default();
-    let border_style = if state.focus {
-        border_style.fg(Color::White)
-    } else {
-        border_style
-    };
-
-    // Menu
-    let list = List::new(state.menu.clone())
-        .block(
-            Block::default()
-                .title("Menu")
-                .borders(Borders::ALL)
-                .border_style(border_style)
-                .border_type(BorderType::Rounded),
-        )
-        .style(Style::default().add_modifier(Modifier::BOLD))
-        .highlight_style(
-            Style::default()
-                .add_modifier(Modifier::BOLD)
-                .bg(Color::Gray),
-        )
-        .highlight_symbol("> ");
-    f.render_stateful_widget(list, area, &mut state.menu_state);
-}
 
 impl<'a> Compose for RankState<'a> {
     fn render(
         &mut self,
         f: &mut Frame<CrosstermBackend<Stdout>>,
-        app_state: &mut AppState,
+        focus: bool,
         area: Rect,
     ) {
         let border_style = Style::default();
-        let border_style = if !app_state.focus {
+        let border_style = if !focus {
             border_style.fg(Color::White)
         } else {
             border_style
@@ -278,28 +307,37 @@ impl<'a> Compose for RankState<'a> {
         f.render_widget(tabs, check[0]);
     }
 
-    fn update(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Tab => {
-                self.get_data();
-                self.tabs_next();
+    fn update(&mut self, event: &Event) {
+        match event {
+            Event::Key(key_event) => {
+                match key_event.code {
+                    KeyCode::Tab => {
+                        self.get_data();
+                        self.tabs_next();
+                    }
+                    KeyCode::BackTab => {
+                        self.get_data();
+                        self.tabs_prev();
+                    },
+                    KeyCode::Enter => todo!("Download"),
+                    KeyCode::Down => self.list_next(),
+                    KeyCode::Up => self.list_prev(),
+                    _ => {}
+                }
             }
-            KeyCode::BackTab => {
-                self.get_data();
-                self.tabs_prev();
-            },
-            KeyCode::Enter => todo!(),
-            KeyCode::Down => self.list_next(),
-            KeyCode::Up => self.list_prev(),
+            Event::Mouse(mouse_event) => {
+                match mouse_event.kind {
+                    MouseEventKind::ScrollUp => self.list_prev(),
+                    MouseEventKind::ScrollDown => self.list_next(),
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }
-}
 
-pub fn update(state: &mut AppState, keycode: KeyCode) {
-    match keycode {
-        KeyCode::Down => state.next(),
-        KeyCode::Up => state.prev(),
-        _ => {}
+    fn init(&mut self) {
+        self.get_data();
     }
 }
+
