@@ -167,7 +167,7 @@ impl<'a> RankState<'a> {
             for (id, task) in queue {
                 task.await.unwrap().unwrap();
                 clone_download_queue.lock().unwrap().remove(&id);
-            } 
+            }
         });
     }
 }
@@ -225,7 +225,7 @@ impl<'a> Compose for RankState<'a> {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(border_style)
-                .border_type(BorderType::Rounded)
+                .border_type(BorderType::Rounded),
         )
         .style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_style(
@@ -246,12 +246,19 @@ impl<'a> Compose for RankState<'a> {
                 let y = size.height - ((index + 1) * 4) as u16;
 
                 f.render_widget(
-                    Gauge::default().block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .title(progress.title.clone()),
-                    ).percent(progress.progress as u16)
-                    .gauge_style(Style::default().fg(Color::White).bg(Color::Black).add_modifier(Modifier::ITALIC)),
+                    Gauge::default()
+                        .block(
+                            Block::default()
+                                .borders(Borders::ALL)
+                                .title(progress.title.clone()),
+                        )
+                        .percent(progress.progress as u16)
+                        .gauge_style(
+                            Style::default()
+                                .fg(Color::White)
+                                .bg(Color::Black)
+                                .add_modifier(Modifier::ITALIC),
+                        ),
                     Rect::new(x, y, 20, 3),
                 );
             }
