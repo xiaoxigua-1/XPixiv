@@ -7,7 +7,7 @@ use std::{
     collections::HashMap,
     io::Stdout,
     path::PathBuf,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
 };
 use tokio::task::JoinHandle;
 use tui::{
@@ -15,7 +15,7 @@ use tui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::Spans,
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Tabs},
+    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, ListState, Tabs},
     Frame,
 };
 use uuid::Uuid;
@@ -32,7 +32,7 @@ pub struct RankState<'a> {
     rank_list: Arc<RwLock<Vec<Content>>>,
     tabs: Vec<&'a str>,
     queue: Vec<JoinHandle<()>>,
-    download_queue: Arc<RwLock<HashMap<Uuid, DownloadInfo>>>,
+    download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
 }
 
 impl DownloadInfo {
@@ -49,7 +49,7 @@ impl<'a> RankState<'a> {
             rank_list: Arc::new(RwLock::new(vec![])),
             tabs,
             queue: vec![],
-            download_queue: Arc::new(RwLock::new(HashMap::new())),
+            download_queue: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -139,26 +139,35 @@ impl<'a> RankState<'a> {
             let images = pixiv::artworks::get_artworks_data(download_id.clone())
                 .await
                 .unwrap();
-            let mut write_download_queue = clone_download_queue.write().unwrap();
+            let mut queue = HashMap::new();
             for (index, url) in images.images.iter().enumerate() {
                 let update_download_progress = clone_download_queue.clone();
                 let title = format!("{}-{}", images.title, index + 1);
                 let info = DownloadInfo::new(title.clone());
                 let id = Uuid::new_v4();
 
-                write_download_queue.insert(id.clone(), info);
+                clone_download_queue
+                    .lock()
+                    .unwrap()
+                    .insert(id.clone(), info);
 
-                tokio::spawn(downloader(
+                let task = tokio::spawn(downloader(
                     PathBuf::from(format!("./images/{}.{}", title, &url[url.len() - 3..])),
                     url.clone(),
                     move |now_size, total_size| {
-                        let mut write_update = update_download_progress.write().unwrap();
+                        let mut write_update = update_download_progress.lock().unwrap();
                         let mut info = write_update[&id].clone();
-                        info.progress = (now_size / total_size) * 20;
+                        info.progress = ((now_size as f64 / total_size as f64) * 100.0) as u64;
                         write_update.insert(id, info);
                     },
                 ));
+                queue.insert(id, task);
             }
+
+            for (id, task) in queue {
+                task.await.unwrap().unwrap();
+                clone_download_queue.lock().unwrap().remove(&id);
+            } 
         });
     }
 }
@@ -216,7 +225,7 @@ impl<'a> Compose for RankState<'a> {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(border_style)
-                .border_type(BorderType::Rounded),
+                .border_type(BorderType::Rounded)
         )
         .style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_style(
@@ -227,6 +236,26 @@ impl<'a> Compose for RankState<'a> {
 
         f.render_stateful_widget(list, check[1], &mut self.rank_list_state);
         f.render_widget(tabs, check[0]);
+
+        let size = f.size();
+        for (index, progress) in self.download_queue.lock().unwrap().values().enumerate() {
+            if size.width < 20 || size.height < ((index + 1) * 4) as u16 {
+                break;
+            } else {
+                let x = size.width - 25;
+                let y = size.height - ((index + 1) * 4) as u16;
+
+                f.render_widget(
+                    Gauge::default().block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .title(progress.title.clone()),
+                    ).percent(progress.progress as u16)
+                    .gauge_style(Style::default().fg(Color::White).bg(Color::Black).add_modifier(Modifier::ITALIC)),
+                    Rect::new(x, y, 20, 3),
+                );
+            }
+        }
     }
 
     fn update(&mut self, event: &Event) {
