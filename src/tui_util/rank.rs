@@ -4,9 +4,10 @@ use crossterm::event::{Event, KeyCode, MouseEventKind};
 use pixiv::downloader::downloader;
 use pixiv::rank::rank_list::Content;
 use std::{
+    collections::HashMap,
     io::Stdout,
     path::PathBuf,
-    sync::{Arc, RwLock}, collections::HashMap,
+    sync::{Arc, RwLock},
 };
 use tokio::task::JoinHandle;
 use tui::{
@@ -22,7 +23,7 @@ use uuid::Uuid;
 #[derive(Clone)]
 struct DownloadInfo {
     title: String,
-    progress: u64
+    progress: u64,
 }
 
 pub struct RankState<'a> {
@@ -36,10 +37,7 @@ pub struct RankState<'a> {
 
 impl DownloadInfo {
     fn new(title: String) -> Self {
-        Self {
-            title,
-            progress: 0
-        }
+        Self { title, progress: 0 }
     }
 }
 
@@ -135,25 +133,31 @@ impl<'a> RankState<'a> {
 
     fn download(&mut self, index: usize) {
         let download_id = self.rank_list.read().unwrap()[index].clone().illust_id;
-
         let clone_download_queue = self.download_queue.clone();
+
         tokio::spawn(async move {
             let images = pixiv::artworks::get_artworks_data(download_id.clone())
                 .await
                 .unwrap();
             let mut write_download_queue = clone_download_queue.write().unwrap();
             for (index, url) in images.images.iter().enumerate() {
-                let updata_download_progress = clone_download_queue.clone();
+                let update_download_progress = clone_download_queue.clone();
                 let title = format!("{}-{}", images.title, index + 1);
                 let info = DownloadInfo::new(title.clone());
                 let id = Uuid::new_v4();
+
                 write_download_queue.insert(id.clone(), info);
-                tokio::spawn(downloader(PathBuf::from(format!("./images/{}.{}", title, &url[url.len() - 3..])), url.clone(), move |now_size, total_size| {
-                    let mut write_updata = updata_download_progress.write().unwrap();
-                    let mut info = write_updata[&id].clone();
-                    info.progress = (now_size / total_size) * 20;
-                    write_updata.insert(id, info);
-                }));
+
+                tokio::spawn(downloader(
+                    PathBuf::from(format!("./images/{}.{}", title, &url[url.len() - 3..])),
+                    url.clone(),
+                    move |now_size, total_size| {
+                        let mut write_update = update_download_progress.write().unwrap();
+                        let mut info = write_update[&id].clone();
+                        info.progress = (now_size / total_size) * 20;
+                        write_update.insert(id, info);
+                    },
+                ));
             }
         });
     }
