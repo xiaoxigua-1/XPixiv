@@ -6,13 +6,13 @@ use scraper::{Html, Selector};
 use self::data::{ArtworkPages, ArtworksData};
 
 pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
+    let mut images = get_artworks_image_data(id).await?;
     let html = reqwest::get(format!("https://www.pixiv.net/artworks/{}", id))
         .await?
         .text()
         .await?;
     let parser = Html::parse_document(&html);
     let selector = Selector::parse("#meta-preload-data").unwrap();
-    let mut images = get_artworks_image_data(id).await?;
     let element = parser.select(&selector).next().unwrap();
     let json_str = element.value().attr("content").unwrap();
     let data: Artworks = serde_json::from_str(json_str).unwrap();

@@ -6,15 +6,11 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::{io, time::Duration};
-use tui::{
-    backend::CrosstermBackend,
-    widgets::ListItem,
-    Terminal,
-};
-use ui_util::{AppState, RankState};
+use tui::{backend::CrosstermBackend, widgets::ListItem, Terminal};
+use tui_util::AppState;
 
 mod cli;
-mod ui_util;
+mod tui_util;
 
 #[tokio::main]
 async fn main() -> pixiv::Result<()> {
@@ -44,13 +40,10 @@ fn tui() -> Result<(), io::Error> {
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let rank_downloader_state = RankState::new(vec![
-        "daily", "weekly", "monthly", "rookie", "original", "daily_ai", "male", "female",
-    ]);
     let mut app_state = AppState::new(vec![
         ListItem::new("Rank Downloader"),
         ListItem::new("Artworks Downloader"),
-    ], vec![Box::new(rank_downloader_state)]);
+    ]);
 
     app_state.init();
 
@@ -63,12 +56,10 @@ fn tui() -> Result<(), io::Error> {
             if let Event::Key(key) = event {
                 match key.code {
                     KeyCode::Char('q') => break,
-                    _ => {
-                        match key.code {
-                            KeyCode::Left | KeyCode::Right => app_state.focus = !app_state.focus,
-                            _ => {}
-                        }
-                   }
+                    _ => match key.code {
+                        KeyCode::Left | KeyCode::Right => app_state.focus = !app_state.focus,
+                        _ => {}
+                    },
                 }
             }
         }

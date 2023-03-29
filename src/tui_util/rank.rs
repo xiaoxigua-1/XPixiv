@@ -1,40 +1,28 @@
+use crate::cli::parse_agrs_type;
+use crate::tui_util::Compose;
+use crossterm::event::{Event, KeyCode, MouseEventKind};
+use pixiv::downloader::downloader;
+use pixiv::rank::rank_list::Content;
 use std::{
     io::Stdout,
-    sync::{Arc, RwLock},
+    path::PathBuf,
+    sync::{Arc, RwLock}, collections::HashMap,
 };
-
-use crossterm::event::{KeyCode, Event, MouseEventKind};
-use pixiv::rank::rank_list::Content;
 use tokio::task::JoinHandle;
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Layout, Rect, Direction},
+    layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::Spans,
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Tabs},
     Frame,
 };
+use uuid::Uuid;
 
-use crate::cli::parse_agrs_type;
-
-pub trait Compose {
-    fn render(
-        &mut self,
-        f: &mut Frame<CrosstermBackend<Stdout>>,
-        focus: bool,
-        area: Rect,
-    );
-
-    fn update(&mut self, event: &Event);
-
-    fn init(&mut self);
-}
-
-pub struct AppState<'a> {
-    menu: Vec<ListItem<'a>>,
-    menu_state: ListState,
-    pub contents: Vec<Box<dyn Compose>>,
-    pub focus: bool,
+#[derive(Clone)]
+struct DownloadInfo {
+    title: String,
+    progress: u64
 }
 
 pub struct RankState<'a> {
@@ -42,105 +30,15 @@ pub struct RankState<'a> {
     rank_list_state: ListState,
     rank_list: Arc<RwLock<Vec<Content>>>,
     tabs: Vec<&'a str>,
-    qu: Vec<JoinHandle<()>>,
+    queue: Vec<JoinHandle<()>>,
+    download_queue: Arc<RwLock<HashMap<Uuid, DownloadInfo>>>,
 }
 
-impl<'a> AppState<'a> {
-    pub fn new(menu: Vec<ListItem<'a>>, contents: Vec<Box<dyn Compose>>) -> Self {
+impl DownloadInfo {
+    fn new(title: String) -> Self {
         Self {
-            menu,
-            menu_state: ListState::default(),
-            focus: true,
-            contents
-        }
-    }
-
-    pub fn init(&mut self) {
-        self.menu_state.select(Some(0));
-        self.contents.iter_mut().for_each(|content| {
-            content.init();
-        });
-    }
-
-    fn next(&mut self) {
-        let i = match self.menu_state.selected() {
-            Some(i) => {
-                if i >= self.menu.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-
-        self.menu_state.select(Some(i));
-    }
-
-    fn prev(&mut self) {
-        let i = match self.menu_state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.menu.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-
-        self.menu_state.select(Some(i));
-    }
-
-    pub fn update(&mut self, event: &Event) {
-        if self.focus {
-            if let Event::Key(key_event) = event {
-                match key_event.code {
-                    KeyCode::Down => self.next(),
-                    KeyCode::Up => self.prev(),
-                    _ => {}
-                }
-            }
-        } else {
-            if let Some(content) = self.contents.get_mut(self.menu_state.selected().unwrap()) {
-                content.update(event);
-            }
-        }
-    }
-
-    pub fn ui(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>) {
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(15), Constraint::Percentage(80)].as_ref())
-            .split(f.size());
-        let border_style = Style::default();
-        let border_style = if self.focus {
-            border_style.fg(Color::White)
-        } else {
-            border_style
-        };
-
-        // Menu
-        let list = List::new(self.menu.clone())
-            .block(
-                Block::default()
-                    .title("Menu")
-                    .borders(Borders::ALL)
-                    .border_style(border_style)
-                    .border_type(BorderType::Rounded),
-            )
-            .style(Style::default().add_modifier(Modifier::BOLD))
-            .highlight_style(
-                Style::default()
-                    .add_modifier(Modifier::BOLD)
-                    .bg(Color::Gray),
-            )
-            .highlight_symbol("> ");
-        f.render_stateful_widget(list, chunks[0], &mut self.menu_state);
-
-        let index = self.menu_state.selected().unwrap(); 
-        if let Some(content) = self.contents.get_mut(index) {
-            content.render(f, self.focus, chunks[1]);
+            title,
+            progress: 0
         }
     }
 }
@@ -152,7 +50,8 @@ impl<'a> RankState<'a> {
             rank_list_state: ListState::default(),
             rank_list: Arc::new(RwLock::new(vec![])),
             tabs,
-            qu: vec![],
+            queue: vec![],
+            download_queue: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -210,9 +109,9 @@ impl<'a> RankState<'a> {
         self.rank_list_state.select(i);
     }
 
-    pub fn get_data(&mut self) {
+    fn get_data(&mut self) {
         self.rank_list_state.select(Some(0));
-        for task in &self.qu {
+        for task in &self.queue {
             task.abort();
         }
 
@@ -231,18 +130,37 @@ impl<'a> RankState<'a> {
             }
         });
 
-        self.qu.push(task);
+        self.queue.push(task);
+    }
+
+    fn download(&mut self, index: usize) {
+        let download_id = self.rank_list.read().unwrap()[index].clone().illust_id;
+
+        let clone_download_queue = self.download_queue.clone();
+        tokio::spawn(async move {
+            let images = pixiv::artworks::get_artworks_data(download_id.clone())
+                .await
+                .unwrap();
+            let mut write_download_queue = clone_download_queue.write().unwrap();
+            for (index, url) in images.images.iter().enumerate() {
+                let updata_download_progress = clone_download_queue.clone();
+                let title = format!("{}-{}", images.title, index + 1);
+                let info = DownloadInfo::new(title.clone());
+                let id = Uuid::new_v4();
+                write_download_queue.insert(id.clone(), info);
+                tokio::spawn(downloader(PathBuf::from(format!("./images/{}.{}", title, &url[url.len() - 3..])), url.clone(), move |now_size, total_size| {
+                    let mut write_updata = updata_download_progress.write().unwrap();
+                    let mut info = write_updata[&id].clone();
+                    info.progress = (now_size / total_size) * 20;
+                    write_updata.insert(id, info);
+                }));
+            }
+        });
     }
 }
 
-
 impl<'a> Compose for RankState<'a> {
-    fn render(
-        &mut self,
-        f: &mut Frame<CrosstermBackend<Stdout>>,
-        focus: bool,
-        area: Rect,
-    ) {
+    fn render(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>, focus: bool, area: Rect) {
         let border_style = Style::default();
         let border_style = if !focus {
             border_style.fg(Color::White)
@@ -309,29 +227,25 @@ impl<'a> Compose for RankState<'a> {
 
     fn update(&mut self, event: &Event) {
         match event {
-            Event::Key(key_event) => {
-                match key_event.code {
-                    KeyCode::Tab => {
-                        self.get_data();
-                        self.tabs_next();
-                    }
-                    KeyCode::BackTab => {
-                        self.get_data();
-                        self.tabs_prev();
-                    },
-                    KeyCode::Enter => todo!("Download"),
-                    KeyCode::Down => self.list_next(),
-                    KeyCode::Up => self.list_prev(),
-                    _ => {}
+            Event::Key(key_event) => match key_event.code {
+                KeyCode::Tab => {
+                    self.get_data();
+                    self.tabs_next();
                 }
-            }
-            Event::Mouse(mouse_event) => {
-                match mouse_event.kind {
-                    MouseEventKind::ScrollUp => self.list_prev(),
-                    MouseEventKind::ScrollDown => self.list_next(),
-                    _ => {}
+                KeyCode::BackTab => {
+                    self.get_data();
+                    self.tabs_prev();
                 }
-            }
+                KeyCode::Enter => self.download(self.rank_list_state.selected().unwrap()),
+                KeyCode::Down => self.list_next(),
+                KeyCode::Up => self.list_prev(),
+                _ => {}
+            },
+            Event::Mouse(mouse_event) => match mouse_event.kind {
+                MouseEventKind::ScrollUp => self.list_prev(),
+                MouseEventKind::ScrollDown => self.list_next(),
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -340,4 +254,3 @@ impl<'a> Compose for RankState<'a> {
         self.get_data();
     }
 }
-
