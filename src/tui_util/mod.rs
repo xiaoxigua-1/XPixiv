@@ -3,23 +3,16 @@ mod rank;
 
 use std::io::Stdout;
 
+use crate::tui_util::compose::Compose;
 use crossterm::event::{Event, KeyCode};
 use rank::RankState;
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState},
     Frame,
 };
-
-pub trait Compose {
-    fn render(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>, focus: bool, area: Rect);
-
-    fn update(&mut self, event: &Event);
-
-    fn init(&mut self);
-}
 
 pub struct AppState<'a> {
     menu: Vec<ListItem<'a>>,

@@ -100,7 +100,7 @@ mod rank_test {
         let mut rank = Rank::new(super::RankType::Daily, false, 44..66);
         let mut index = 0;
         loop {
-            if let Some(next) = rank.next().await.unwrap() {
+            if let Some(_) = rank.next().await.unwrap() {
                 index += 1;
             } else {
                 break;

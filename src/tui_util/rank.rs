@@ -1,5 +1,5 @@
 use crate::cli::parse_agrs_type;
-use crate::tui_util::Compose;
+use crate::tui_util::compose::Compose;
 use crossterm::event::{Event, KeyCode, MouseEventKind};
 use pixiv::downloader::downloader;
 use pixiv::rank::rank_list::Content;
@@ -131,7 +131,7 @@ impl<'a> RankState<'a> {
         self.queue.push(task);
     }
 
-    fn download(&mut self, index: usize) {
+    fn download(&mut self, index: usize) -> JoinHandle<()> {
         let download_id = self.rank_list.read().unwrap()[index].clone().illust_id;
         let clone_download_queue = self.download_queue.clone();
 
@@ -160,6 +160,7 @@ impl<'a> RankState<'a> {
                         info.progress = ((now_size as f64 / total_size as f64) * 100.0) as u64;
                         write_update.insert(id, info);
                     },
+                    |_| {},
                 ));
                 queue.insert(id, task);
             }
@@ -168,7 +169,7 @@ impl<'a> RankState<'a> {
                 task.await.unwrap().unwrap();
                 clone_download_queue.lock().unwrap().remove(&id);
             }
-        });
+        })
     }
 }
 
@@ -276,9 +277,17 @@ impl<'a> Compose for RankState<'a> {
                     self.get_data();
                     self.tabs_prev();
                 }
-                KeyCode::Enter => self.download(self.rank_list_state.selected().unwrap()),
+                KeyCode::Enter => {
+                    self.download(self.rank_list_state.selected().unwrap());
+                }
                 KeyCode::Down => self.list_next(),
                 KeyCode::Up => self.list_prev(),
+                KeyCode::Char('a') => {
+                    let clone_len = self.rank_list.read().unwrap().len().clone();
+                    for i in 0..clone_len {
+                        self.download(i);
+                    }
+                }
                 _ => {}
             },
             Event::Mouse(mouse_event) => match mouse_event.kind {

@@ -6,9 +6,15 @@ use std::{
 
 use futures_util::StreamExt;
 
-pub async fn downloader<F>(path: PathBuf, url: String, progress: F) -> reqwest::Result<()>
+pub async fn downloader<F, FT>(
+    path: PathBuf,
+    url: String,
+    progress: F,
+    total: FT,
+) -> reqwest::Result<()>
 where
     F: Fn(u64, u64),
+    FT: Fn(u64),
 {
     create_dir_all(path.parent().unwrap()).unwrap();
 
@@ -20,7 +26,7 @@ where
         .send()
         .await?;
     let total_size = response.content_length().unwrap();
-
+    total(total_size);
     if let Ok(file) = &mut file {
         let mut byte_stream = response.bytes_stream();
         let mut now_size: u64 = 0;
@@ -47,6 +53,7 @@ mod test {
             PathBuf::new(),
             "https://i.pximg.net/img-original/img/2023/03/23/00/05/02/106465672_p0.png".to_string(),
             |_, _| {},
+            |_| {},
         )
         .await?;
         Ok(())

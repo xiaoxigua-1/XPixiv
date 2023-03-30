@@ -1,11 +1,17 @@
-use std::{io::Write, path::PathBuf};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use clap::{Args, Parser, Subcommand};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use pixiv::{
     artworks::get_artworks_data,
     downloader::downloader,
     rank::{Rank, RankType},
 };
+use tokio::time::sleep;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -65,10 +71,27 @@ pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
         false,
         args.start..args.end,
     );
+    let progress_manager = MultiProgress::new();
+    progress_manager.set_alignment(indicatif::MultiProgressAlignment::Bottom);
+    let progress_manager = Arc::new(Mutex::new(progress_manager));
+    let progress_style = ProgressStyle::with_template(
+        "{spinner:.green} [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} ({eta})",
+    )
+    .unwrap()
+    .progress_chars("##-");
+    let total_progress = progress_manager
+        .lock()
+        .unwrap()
+        .add(ProgressBar::new((args.end - args.start) as u64 + 1));
+    total_progress.set_style(progress_style.clone());
+    total_progress.enable_steady_tick(Duration::from_millis(100));
+
     loop {
+        total_progress.inc(1);
         if let Some(id) = rank.next().await? {
             let images = get_artworks_data(id.illust_id).await?;
             let mut path = PathBuf::from(&args.path);
+            let mut download_qu = vec![];
             if let Some(group) = &args.path_group {
                 match group.as_str() {
                     "author" => path.push(&format!("{}/", images.user_name)),
@@ -87,33 +110,41 @@ pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
                 );
                 let url_clone = url.clone();
                 let title = images.title.clone();
-                tokio::spawn(async move {
-                    let progress_fn = |now_size, total_size| {
-                        let progress: f64 = now_size as f64 / total_size as f64;
-                        print!("\u{001b}[1000D\u{001b}[2K");
-                        print!("{}-{} Downloading |", title, index);
-                        for i in 0..10 {
-                            let c = if (i as f64) > 10 as f64 * progress {
-                                ' '
-                            } else {
-                                '#'
-                            };
-                            print!("{}", c);
-                        }
-                        print!("| {}%", (progress * 100.0) as u64);
-                        std::io::stdout().flush().unwrap();
+                let clone_progress_manager = progress_manager.clone();
+                let task = tokio::spawn(async move {
+                    let task_progress: Arc<Mutex<ProgressBar>> =
+                        Arc::new(Mutex::new(ProgressBar::hidden()));
+                    let clone_progress = task_progress.clone();
+                    let clone_two_p = task_progress.clone();
+                    let progress_fn = |now_size, _| {
+                        clone_two_p.lock().unwrap().set_position(now_size);
                     };
-                    downloader(path_clone.join(&image_name), url_clone, progress_fn)
+
+                    downloader(path_clone.join(&image_name), url_clone, progress_fn, |total_size| {
+                        let progress = ProgressBar::new(total_size);
+                        *clone_progress.lock().unwrap() = clone_progress_manager.lock().unwrap().add(progress);
+                        clone_progress.lock().unwrap().set_style(ProgressStyle::with_template("{spinner:.green} [{msg}] [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        .unwrap()
+        .progress_chars("#>-"));
+                        clone_progress.lock().unwrap().set_message(format!("{}-{}", title, index));
+                    })
                         .await
                         .unwrap();
-                })
-                .await
-                .unwrap();
+                    task_progress.lock().unwrap().finish_and_clear();
+                });
+                download_qu.push(task);
+                sleep(Duration::from_millis(10)).await;
+            }
+
+            for task in download_qu {
+                if let Err(_) = task.await {};
             }
         } else {
             break;
         }
     }
+
+    total_progress.finish_with_message("Deno");
 
     Ok(())
 }
