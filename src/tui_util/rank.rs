@@ -118,7 +118,7 @@ impl<'a> RankState<'a> {
 
         let task = tokio::spawn(async move {
             rank_list_clone.write().unwrap().clear();
-            let mut rank = pixiv::rank::Rank::new(rank_type, false, 1..500);
+            let mut rank = x_pixiv_lib::rank::Rank::new(rank_type, false, 1..500);
             loop {
                 if let Some(content) = rank.next().await.unwrap() {
                     rank_list_clone.write().unwrap().push(content);
@@ -136,7 +136,7 @@ impl<'a> RankState<'a> {
         let clone_download_queue = self.download_queue.clone();
 
         tokio::spawn(async move {
-            let images = pixiv::artworks::get_artworks_data(download_id.clone())
+            let images = x_pixiv_lib::artworks::get_artworks_data(download_id.clone())
                 .await
                 .unwrap();
             let mut queue = HashMap::new();
