@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/xiaoxigua-1/XPixiv"
 readme = "README.md"
 keywords = ["pixiv", "downloader"]
-
+authors = ["xiaoxigua-1 <xigua@xigua.tw>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
