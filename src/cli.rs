@@ -29,7 +29,7 @@ pub enum Commands {
 #[derive(Args, Debug)]
 pub struct RankArgs {
     /// rank start at index
-    #[arg(default_value_t = 0, short = 's', long)]
+    #[arg(default_value_t = 1, short = 's', long)]
     start: usize,
 
     /// rank end at index
@@ -95,6 +95,7 @@ pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
             if let Some(group) = &args.path_group {
                 match group.as_str() {
                     "author" => path.push(&format!("{}/", images.user_name)),
+                    "title" => path.push(&format!("{}/", images.title)),
                     _ => {}
                 }
             }

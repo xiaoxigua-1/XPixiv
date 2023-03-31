@@ -54,7 +54,7 @@ impl Rank {
             is_r18,
             download_range,
             queue: vec![],
-            current: start,
+            current: (start / 50) * 50,
         }
     }
 
@@ -75,7 +75,9 @@ impl Rank {
             if response.status() == 200 {
                 let data = response.json::<RankList>().await?;
                 let list = &mut if self.download_range.start > self.current {
-                    data.contents[(self.download_range.start - self.current)..].to_vec()
+                    let data = data.contents[(self.download_range.start - self.current)..].to_vec();
+                    self.current = self.download_range.start;
+                    data
                 } else {
                     data.contents
                 };
