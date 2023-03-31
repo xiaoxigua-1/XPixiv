@@ -6,7 +6,7 @@ use std::{
 
 use clap::{Args, Parser, Subcommand};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use pixiv::{
+use x_pixiv_lib::{
     artworks::get_artworks_data,
     downloader::downloader,
     rank::{Rank, RankType},
