@@ -2,7 +2,11 @@
 name = "pixiv"
 version = "0.1.0"
 edition = "2021"
-description = "pixiv library"
+license-file = "LICENSE"
+repository = "https://github.com/xiaoxigua-1/XPixiv"
+readme = "README.md"
+keywords = ["pixiv", "downloader"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
