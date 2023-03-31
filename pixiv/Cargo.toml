@@ -1,5 +1,5 @@
 [package]
-name = "pixiv"
+name = "x-pixiv-lib"
 version = "0.1.0"
 edition = "2021"
 description = "pixiv library"

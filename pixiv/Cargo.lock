@@ -811,18 +811,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
-name = "pixiv"
-version = "0.1.0"
-dependencies = [
- "futures-util",
- "reqwest",
- "scraper",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "pkg-config"
 version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1652,4 +1640,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "x-pixiv-lib"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "reqwest",
+ "scraper",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
