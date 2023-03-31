@@ -65,7 +65,7 @@ pub fn parse_agrs_type(s: &str) -> RankType {
     }
 }
 
-pub async fn rank_downloader(args: &RankArgs) -> pixiv::Result<()> {
+pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
     let mut rank = Rank::new(
         parse_agrs_type(&args.rank_type),
         false,

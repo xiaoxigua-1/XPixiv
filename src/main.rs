@@ -13,7 +13,7 @@ mod cli;
 mod tui_util;
 
 #[tokio::main]
-async fn main() -> pixiv::Result<()> {
+async fn main() -> x_pixiv_lib::Result<()> {
     match std::env::args().len() {
         1 => {
             tui().unwrap();
@@ -24,7 +24,7 @@ async fn main() -> pixiv::Result<()> {
     Ok(())
 }
 
-async fn cli() -> pixiv::Result<()> {
+async fn cli() -> x_pixiv_lib::Result<()> {
     let cli = Cli::parse();
     match &cli.command {
         Commands::Rank(args) => rank_downloader(args).await?,
