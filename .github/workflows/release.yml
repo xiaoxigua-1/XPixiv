@@ -59,8 +59,8 @@ jobs:
           target: ${{ matrix.target }}
       - name: Install OpenSSL dependencies
         run: |
-          apt update
-          apt install openssl -y
+          sudo apt update
+          sudo apt install openssl -y
       
 
       - name: Setup cache
