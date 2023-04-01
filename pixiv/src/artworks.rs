@@ -1,9 +1,7 @@
-mod data;
-
-use data::Artworks;
 use scraper::{Html, Selector};
 
-use self::data::{ArtworkPages, ArtworksData};
+use crate::data::{Api, ArtworkPagesData, ArtworksData, Illust};
+use std::collections::HashMap;
 
 pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
     let mut images = get_artworks_image_data(id).await?;
@@ -15,7 +13,7 @@ pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
     let selector = Selector::parse("#meta-preload-data").unwrap();
     let element = parser.select(&selector).next().unwrap();
     let json_str = element.value().attr("content").unwrap();
-    let data: Artworks = serde_json::from_str(json_str).unwrap();
+    let data: Illust<HashMap<String, ArtworksData>> = serde_json::from_str(json_str).unwrap();
 
     let mut artworks_data = data.illust.get(&id.to_string()).unwrap().clone();
     artworks_data.images.append(&mut images);
@@ -26,7 +24,7 @@ pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
 pub async fn get_artworks_image_data(id: usize) -> reqwest::Result<Vec<String>> {
     let mut data = reqwest::get(format!("https://www.pixiv.net/ajax/illust/{}/pages", id))
         .await?
-        .json::<ArtworkPages>()
+        .json::<Api<Vec<ArtworkPagesData>>>()
         .await?;
     let images = data
         .body

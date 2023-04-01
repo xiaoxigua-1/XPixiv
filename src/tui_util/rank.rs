@@ -1,8 +1,6 @@
 use crate::cli::parse_agrs_type;
 use crate::tui_util::compose::Compose;
 use crossterm::event::{Event, KeyCode, MouseEventKind};
-use x_pixiv_lib::downloader::downloader;
-use x_pixiv_lib::rank::rank_list::Content;
 use std::{
     collections::HashMap,
     io::Stdout,
@@ -19,6 +17,8 @@ use tui::{
     Frame,
 };
 use uuid::Uuid;
+use x_pixiv_lib::data::Content;
+use x_pixiv_lib::downloader::downloader;
 
 #[derive(Clone)]
 struct DownloadInfo {

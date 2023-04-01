@@ -1,8 +1,6 @@
 use std::{fmt::Display, ops::Range};
 
-use self::rank_list::{Content, RankList};
-
-pub mod rank_list;
+use crate::data::{Content, RankList};
 
 const RANK_URI: &str = "https://www.pixiv.net/ranking.php";
 

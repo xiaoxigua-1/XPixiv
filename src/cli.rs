@@ -6,12 +6,12 @@ use std::{
 
 use clap::{Args, Parser, Subcommand};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use tokio::time::sleep;
 use x_pixiv_lib::{
     artworks::get_artworks_data,
     downloader::downloader,
     rank::{Rank, RankType},
 };
-use tokio::time::sleep;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
