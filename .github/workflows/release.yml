@@ -58,6 +58,7 @@ jobs:
           override: true
           target: ${{ matrix.target }}
       - name: Install OpenSSL dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install openssl -y
