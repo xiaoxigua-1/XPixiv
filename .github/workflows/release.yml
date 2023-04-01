@@ -51,6 +51,7 @@ jobs:
           override: true
           target: ${{ matrix.target }}
       - name: x86_64 Linux Install Dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install libssl-dev pkg-config
@@ -61,7 +62,6 @@ jobs:
           key: ${{ matrix.target }}
 
       - name: X86_64 Build binary
-        if: ${{ matrix.target != 'i686-unknown-linux-gnu' }}
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: build
