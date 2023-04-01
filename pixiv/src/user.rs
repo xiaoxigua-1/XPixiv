@@ -1,4 +1,4 @@
-use crate::data::Illust;
+use crate::data::{Api, Illusts};
 
 use std::collections::HashMap;
 
@@ -17,14 +17,26 @@ impl User {
             self.id
         ))
         .await?
-        .json::<Illust<HashMap<usize, Option<bool>>>>()
+        .json::<Api<Illusts<HashMap<usize, Option<bool>>>>>()
         .await?;
         let images = data
-            .illust
+            .body
+            .illusts
             .keys()
             .map(|k| k.clone())
             .collect::<Vec<usize>>();
 
         Ok(images)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::User;
+
+    #[tokio::test]
+    async fn test() {
+        let images = User::new(3115085).get_artworks().await.unwrap();
+        println!("{:?}", images);
     }
 }

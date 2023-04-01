@@ -1,5 +1,5 @@
 use clap::Parser;
-use cli::{rank_downloader, Cli, Commands};
+use cli::{artwork_download, rank_downloader, Cli, Commands};
 use crossterm::{
     event::{read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -28,7 +28,7 @@ async fn cli() -> x_pixiv_lib::Result<()> {
     let cli = Cli::parse();
     match &cli.command {
         Commands::Rank(args) => rank_downloader(args).await?,
-        _ => {}
+        Commands::Artwork(args) => artwork_download(args).await?,
     }
 
     Ok(())

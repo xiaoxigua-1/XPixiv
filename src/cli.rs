@@ -23,7 +23,18 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Rank(RankArgs),
-    Artwork,
+    Artwork(ArtworkArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct ArtworkArgs {
+    /// output path
+    #[arg(default_value_t = String::from("./"), short = 'p', long)]
+    path: String,
+
+    /// artwork id
+    #[arg()]
+    id: usize,
 }
 
 #[derive(Args, Debug)]
@@ -147,5 +158,32 @@ pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
 
     total_progress.finish_with_message("Deno");
 
+    Ok(())
+}
+
+pub async fn artwork_download(args: &ArtworkArgs) -> x_pixiv_lib::Result<()> {
+    let data = get_artworks_data(args.id).await?;
+
+    for (index, url) in data.images.iter().enumerate() {
+        let mut output_path = PathBuf::from(&args.path);
+        let progress = Arc::new(Mutex::new(ProgressBar::hidden()));
+        let clone_progress = progress.clone();
+
+        output_path.push(format!("{}-{}", data.title, index));
+
+        downloader(output_path, url.clone(), |now, _| {
+            progress.lock().unwrap().set_position(now);
+        }, |total| {
+            let progress = ProgressBar::new(total);
+            let style = ProgressStyle::with_template("{spinner:.green} [{msg}] [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                .unwrap()
+                .progress_chars("#>-");
+            progress.set_message(format!("{}-{} Downlading", data.title, index));
+            progress.set_style(style);
+            *clone_progress.lock().unwrap() = progress;
+        }).await?;
+
+        progress.lock().unwrap().finish_with_message(format!("{}-{} Download complete", data.title, index));
+    }
     Ok(())
 }

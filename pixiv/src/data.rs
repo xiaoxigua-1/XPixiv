@@ -11,6 +11,11 @@ pub struct Illust<T> {
     pub illust: T,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct Illusts<T> {
+    pub illusts: T,
+}
+
 /// https://www.pixiv.net/ajax/illust/{id}/pages
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ArtworksData {
