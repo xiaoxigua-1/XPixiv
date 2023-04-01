@@ -20,15 +20,6 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             deb: true
-          - os: ubuntu-latest
-            target: i686-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: arm-unknown-linux-gnueabi
-          - os: ubuntu-latest
-            target: armv7-unknown-linux-gnueabi
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            deb: true
 
           - os: macos-11
             target: x86_64-apple-darwin
@@ -60,39 +51,9 @@ jobs:
           override: true
           target: ${{ matrix.target }}
       - name: x86_64 Linux Install Dependencies
-        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
         run: |
           sudo apt-get update
           sudo apt-get install libssl-dev pkg-config
-          
-      - name: i686 Linux Install Dependencies
-        if: ${{ matrix.target == 'i686-unknown-linux-gnu' }}
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update
-          sudo apt-get install libssl-dev:i386
-
-      - name: Arm64 Linux Install Dependencies
-        if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
-        run: |
-          sudo dpkg --add-architecture arm
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev:arm64
-
-      - name: Arm Linux Install Dependencies
-        if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
-        run: |
-          sudo dpkg --add-architecture arm
-          sudo apt-get update
-          sudo apt-get install --assume-yes libssl-dev:arm pkg-config
-
-      - name: Armv7 Linux Install Dependencies
-        if: ${{ matrix.target == 'armv7-unknown-linux-gnueabi' }}
-        run: |
-          sudo dpkg --add-architecture armhf
-          sudo apt-get update
-          sudo apt-get install --assume-yes libssl-dev:armhf pkg-config
-
 
       - name: Setup cache
         uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b # v1
@@ -106,14 +67,6 @@ jobs:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
           
-      - name: X86 Build binary
-        if: ${{ matrix.target == 'i686-unknown-linux-gnu' }}
-        env:
-          OPENSSL_LIB_DIR: /usr/lib/i386-linux-gnu/
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: build
-          args: --release --locked --target=${{ matrix.target }} --color=always --verbose
           # use-cross: ${{ runner.os == 'Linux' }}
 #       - name: Install cargo-deb
 #         if: ${{ matrix.deb == true }}
