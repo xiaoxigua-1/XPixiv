@@ -57,6 +57,11 @@ jobs:
           profile: minimal
           override: true
           target: ${{ matrix.target }}
+      - name: Install OpenSSL dependencies
+        run: |
+          apt update
+          apt install openssl -y
+      
 
       - name: Setup cache
         uses: Swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b # v1
@@ -68,7 +73,7 @@ jobs:
         with:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
-          # use-cross: ${{ runner.os == 'Linux' }}
+          use-cross: ${{ runner.os == 'Linux' }}
 
 #       - name: Install cargo-deb
 #         if: ${{ matrix.deb == true }}
