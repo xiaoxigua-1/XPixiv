@@ -57,11 +57,10 @@ jobs:
           profile: minimal
           override: true
           target: ${{ matrix.target }}
-      - name: Install OpenSSL dependencies
+      - name: Install dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt update
-          sudo apt install pkg-config libssl-dev -y
+          sudo apt-get install pkg-config libssl-dev
       
 
       - name: Setup cache
