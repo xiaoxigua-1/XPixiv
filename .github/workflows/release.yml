@@ -21,6 +21,8 @@ jobs:
             target: x86_64-unknown-linux-gnu
             deb: true
           - os: ubuntu-latest
+            target: i686-unknown-linux-gnu
+          - os: ubuntu-latest
             target: arm-unknown-linux-gnueabi
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabi
@@ -62,10 +64,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libssl-dev pkg-config
+          
+      - name: i686 Linux Install Dependencies
+        if: ${{ matrix.target == 'i686-unknown-linux-gnu' }}
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install libssl-dev:i386
 
       - name: Arm64 Linux Install Dependencies
         if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
         run: |
+          sudo dpkg --add-architecture arm
           sudo apt-get update
           sudo apt-get install -y libssl-dev:arm64
 
