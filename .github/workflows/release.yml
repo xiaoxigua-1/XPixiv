@@ -74,7 +74,7 @@ jobs:
         with:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
-          use-cross: ${{ runner.os == 'Linux' }}
+          # use-cross: ${{ runner.os == 'Linux' }}
 #       - name: Install cargo-deb
 #         if: ${{ matrix.deb == true }}
 #         uses: actions-rs/install@9da1d2adcfe5e7c16992e8242ca33a56b6d9b101 # v0.1.2
