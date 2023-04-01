@@ -61,7 +61,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install libssl-dev -y
+          sudo apt install pkg-config libssl-dev -y
       
 
       - name: Setup cache
