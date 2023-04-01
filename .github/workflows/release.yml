@@ -99,7 +99,17 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Build binary
+      - name: X86_64 Build binary
+        if: ${{ matrix.target != 'i686-unknown-linux-gnu' }}
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
+        with:
+          command: build
+          args: --release --locked --target=${{ matrix.target }} --color=always --verbose
+          
+      - name: X86 Build binary
+        if: ${{ matrix.target == 'i686-unknown-linux-gnu' }}
+        env:
+          OPENSSL_LIB_DIR: /usr/lib/i386-linux-gnu/
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: build
