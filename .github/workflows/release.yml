@@ -61,7 +61,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install openssl -y
+          sudo apt install libssl-dev -y
       
 
       - name: Setup cache
