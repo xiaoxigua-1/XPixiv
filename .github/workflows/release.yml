@@ -68,7 +68,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture arm64
           sudo apt-get update
-          sudo apt-get install --assume-yes libssl-dev:arm64 pkg-config
+          sudo apt-get install --assume-yes libssl-dev:arm64
 
       - name: Arm Linux Install Dependencies
         if: ${{ matrix.target == 'aarch64-unknown-linux-gnu' }}
