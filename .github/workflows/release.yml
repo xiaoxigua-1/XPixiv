@@ -42,7 +42,7 @@ jobs:
 
       - name: Get version
         id: get_version
-        uses: SebRollen/toml-action@v2
+        uses: SebRollen/toml-action@v1.0.1
         with:
           file: Cargo.toml
           field: package.version
