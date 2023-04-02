@@ -22,6 +22,8 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             deb: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
 
           - os: macos-11
             target: x86_64-apple-darwin
@@ -64,11 +66,20 @@ jobs:
           key: ${{ matrix.target }}
 
       - name: Build binary
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
-
+          
+      - name: Strip release binary (arm)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          docker run --rm -v \
+            "$PWD/target:/target:Z" \
+            rustembedded/cross:${{ matrix.target }} \
+            aarch64-linux-gnu-strip \
+            /target/${{ matrix.target }}/release/x-pixiv
 
           # use-cross: ${{ runner.os == 'Linux' }}
 #       - name: Install cargo-deb
