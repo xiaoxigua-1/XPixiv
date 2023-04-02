@@ -21,6 +21,12 @@ jobs:
           fetch-depth: 0
       - name: crates.io release
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
+        run: |
+          cd pixiv
+          cargo publish --token ${{ secrets.CARGO_TOKEN }}
+          cd ..
+      - name: crates.io release
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: publish 
           args: --token ${{ secrets.CARGO_TOKEN }}
