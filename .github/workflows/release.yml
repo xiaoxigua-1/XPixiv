@@ -12,6 +12,19 @@ permissions:
   contents: write
 
 jobs:
+  crates-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v2.6.0
+        with:
+          fetch-depth: 0
+      - name: crates.io release
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
+        with:
+          command: publish 
+          args: --token ${{ secrets.CARGO_TOKEN }}
+
   release:
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
@@ -69,11 +82,6 @@ jobs:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
 
-      - name: crates.io release
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: publish 
-          args: --token ${{ secrets.CARGO_TOKEN }}
 
           # use-cross: ${{ runner.os == 'Linux' }}
 #       - name: Install cargo-deb
