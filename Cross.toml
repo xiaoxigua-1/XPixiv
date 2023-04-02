@@ -1,11 +1,9 @@
 [target.aarch64-unknown-linux-gnu]
-image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu"
-pre-build = ["dpkg --add-architecture arm64", "apt-get update", "apt-get install --assume-yes libssl-dev libssl-dev:arm64"]
+pre-build = ["dpkg --add-architecture arm64", "apt-get update", "apt-get install --assume-yes libssl-dev:arm64"]
 
 [target.x86_64-unknown-linux-gnu]
-image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu"
-pre-build = ["apt-get update", "apt-get install --assume-yes libssl-dev libssl-dev"]
+pre-build = ["apt-get update", "apt-get install --assume-yes libssl-dev"]
 
 [target.armv7-unknown-linux-gnueabi]
-image = "ghcr.io/cross-rs/armv7-unknown-linux-gnueabi"
-pre-build = ["dpkg --add-architecture armhf", "apt-get update", "apt-get install --assume-yes libssl-dev libssl-dev:armhf"]
+pre-build = ["dpkg --add-architecture armhf", "apt-get update", "apt-get install --assume-yes libssl-dev:armhf"]
+
