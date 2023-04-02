@@ -68,7 +68,13 @@ jobs:
         with:
           command: build
           args: --release --locked --target=${{ matrix.target }} --color=always --verbose
-          
+
+      - name: crates.io release
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
+        with:
+          command: publish 
+          args: --token ${{ secrets.CARGO_TOKEN }}
+
           # use-cross: ${{ runner.os == 'Linux' }}
 #       - name: Install cargo-deb
 #         if: ${{ matrix.deb == true }}
