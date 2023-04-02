@@ -4,6 +4,5 @@ pre-build = ["dpkg --add-architecture arm64", "apt-get update", "apt-get install
 [target.x86_64-unknown-linux-gnu]
 pre-build = ["apt-get update", "apt-get install --assume-yes libssl-dev"]
 
-[target.armv7-unknown-linux-gnueabi]
-pre-build = ["dpkg --add-architecture armhf", "apt-get update", "apt-get install --assume-yes libssl-dev:armhf"]
-
+[target.i686-unknown-linux-gnu]
+pre-build = ["dpkg --add-architecture i686", "apt-get update", "apt-get install --assume-yes libssl-dev:i686"]
