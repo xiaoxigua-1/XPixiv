@@ -10,7 +10,8 @@ use tokio::time::sleep;
 use x_pixiv_lib::{
     artworks::get_artworks_data,
     downloader::downloader,
-    rank::{Rank, RankType}, user::User,
+    rank::{Rank, RankType},
+    user::User,
 };
 
 #[derive(Parser)]
@@ -199,9 +200,12 @@ pub async fn artwork_download(args: &ArtworkArgs) -> x_pixiv_lib::Result<()> {
             *clone_progress.lock().unwrap() = progress;
         }).await?;
 
-        progress.lock().unwrap().finish_with_message(format!("{}-{} Download complete", data.title, index));
+        progress
+            .lock()
+            .unwrap()
+            .finish_with_message(format!("{}-{} Download complete", data.title, index));
     }
-    
+
     Ok(())
 }
 
@@ -212,7 +216,11 @@ pub async fn user_download(args: &UserArgs) -> x_pixiv_lib::Result<()> {
 
     for id in image_ids {
         let data = get_artworks_data(id).await?;
-        let group_path = if args.is_group { output_path.join(format!("{}", data.title)) } else { output_path.clone() };
+        let group_path = if args.is_group {
+            output_path.join(format!("{}", data.title))
+        } else {
+            output_path.clone()
+        };
 
         for (index, url) in data.images.iter().enumerate() {
             let progress = Arc::new(Mutex::new(ProgressBar::hidden()));
@@ -230,7 +238,10 @@ pub async fn user_download(args: &UserArgs) -> x_pixiv_lib::Result<()> {
                 *clone_progress.lock().unwrap() = progress;
             }).await?;
 
-            progress.lock().unwrap().finish_with_message(format!("{}-{} Download complete", data.title, index));
+            progress
+                .lock()
+                .unwrap()
+                .finish_with_message(format!("{}-{} Download complete", data.title, index));
         }
     }
 

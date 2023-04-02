@@ -1,5 +1,5 @@
 use clap::Parser;
-use cli::{artwork_download, rank_downloader, Cli, Commands, user_download};
+use cli::{artwork_download, rank_downloader, user_download, Cli, Commands};
 use crossterm::{
     event::{read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
