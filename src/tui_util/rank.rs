@@ -195,7 +195,7 @@ impl<'a> Compose for RankState<'a> {
         .style(Style::default())
         .block(
             Block::default()
-                .title(format!("{} rank list", self.tabs[self.tabs_index]))
+                .title(format!("{} rank list(Tab)", self.tabs[self.tabs_index]))
                 .borders(Borders::ALL)
                 .border_style(border_style)
                 .border_type(BorderType::Rounded),

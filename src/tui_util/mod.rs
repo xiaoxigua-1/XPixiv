@@ -103,7 +103,7 @@ impl<'a> AppState<'a> {
         let list = List::new(self.menu.clone())
             .block(
                 Block::default()
-                    .title("Menu")
+                    .title("Menu ⇦⇧⇩⇨ ")
                     .borders(Borders::ALL)
                     .border_style(border_style)
                     .border_type(BorderType::Rounded),
