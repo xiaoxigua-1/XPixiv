@@ -31,6 +31,7 @@ pub struct RankState<'a> {
 struct ArtworkInfo {
     content: Content,
     error: Arc<RwLock<bool>>,
+    downloading: Arc<RwLock<bool>>,
 }
 
 impl ArtworkInfo {
@@ -38,6 +39,7 @@ impl ArtworkInfo {
         Self {
             content,
             error: Arc::new(RwLock::new(false)),
+            downloading: Arc::new(RwLock::new(false)) 
         }
     }
 }
@@ -180,11 +182,13 @@ impl<'a> Compose for RankState<'a> {
                         info.content.title,
                         info.content.illust_id
                     ))
-                    .style(if *info.error.read().unwrap() {
-                        Style::default().bg(Color::Red)
+                    .style(Style::default().bg(if *info.error.read().unwrap() {
+                        Color::Red
+                    } else if *info.downloading.read().unwrap() {
+                        Color::LightGreen
                     } else {
-                        Style::default()
-                    })
+                        Color::Reset
+                    }))
                 })
                 .collect::<Vec<ListItem>>(),
         )
@@ -222,10 +226,13 @@ impl<'a> Compose for RankState<'a> {
                     let rank_list = self.rank_list.clone();
                     let id = rank_list.read().unwrap()[index].content.illust_id;
 
+                    *rank_list.write().unwrap()[index].downloading.write().unwrap() = true;
+
                     tokio::spawn(async move {
                         if let Err(_) = download(id, download_queue).await {
                             *rank_list.write().unwrap()[index].error.write().unwrap() = true;
                         };
+                        *rank_list.write().unwrap()[index].downloading.write().unwrap() = false;
                     });
                 }
                 KeyCode::Down => self.list_next(),
@@ -236,10 +243,12 @@ impl<'a> Compose for RankState<'a> {
 
                     tokio::spawn(async move {
                         for i in 0..clone_len {
+                            *rank_list.write().unwrap()[i].downloading.write().unwrap() = true;
                             let id = rank_list.read().unwrap()[i].content.illust_id;
                             if let Err(_) = download(id, download_queue.clone()).await {
                                 *rank_list.write().unwrap()[i].error.write().unwrap() = true;
                             };
+                            *rank_list.write().unwrap()[i].downloading.write().unwrap() = false;
                         }
                     });
                 }
