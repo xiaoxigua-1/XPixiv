@@ -4,15 +4,19 @@ mod data;
 mod rank;
 
 use std::io::Stdout;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
+use uuid::Uuid;
+use data::DownloadInfo;
 use crate::tui_util::compose::Compose;
 use crossterm::event::{Event, KeyCode};
 use rank::RankState;
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Gauge},
     Frame,
 };
 
@@ -23,6 +27,7 @@ pub struct AppState<'a> {
     menu_state: ListState,
     pub contents: Vec<Box<dyn Compose>>,
     pub focus: bool,
+    download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
 }
 
 impl<'a> AppState<'a> {
@@ -36,6 +41,7 @@ impl<'a> AppState<'a> {
             menu_state: ListState::default(),
             focus: true,
             contents: vec![Box::new(rank_downloader_state), Box::new(artwork_state)],
+            download_queue: Arc::new(Mutex::new(HashMap::new())) 
         }
     }
 
@@ -87,7 +93,7 @@ impl<'a> AppState<'a> {
             }
         } else {
             if let Some(content) = self.contents.get_mut(self.menu_state.selected().unwrap()) {
-                content.update(event);
+                content.update(event, self.download_queue.clone());
             }
         }
     }
@@ -125,6 +131,34 @@ impl<'a> AppState<'a> {
         let index = self.menu_state.selected().unwrap();
         if let Some(content) = self.contents.get_mut(index) {
             content.render(f, self.focus, chunks[1]);
+        }
+
+
+        let size = f.size();
+        for (index, progress) in self.download_queue.lock().unwrap().values().enumerate() {
+            if size.width < 20 || size.height < ((index + 1) * 4) as u16 {
+                break;
+            } else {
+                let x = size.width - 25;
+                let y = size.height - ((index + 1) * 4) as u16;
+
+                f.render_widget(
+                    Gauge::default()
+                        .block(
+                            Block::default()
+                                .borders(Borders::ALL)
+                                .title(progress.title.clone()),
+                        )
+                        .percent(progress.progress as u16)
+                        .gauge_style(
+                            Style::default()
+                                .fg(Color::White)
+                                .bg(Color::Black)
+                                .add_modifier(Modifier::ITALIC),
+                        ),
+                    Rect::new(x, y, 20, 3),
+                );
+            }
         }
     }
 }

@@ -14,12 +14,13 @@ use tui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::Spans,
-    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, ListState, Tabs},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Tabs},
     Frame,
 };
 use uuid::Uuid;
 use x_pixiv_lib::data::Content;
 use x_pixiv_lib::downloader::downloader;
+use x_pixiv_lib::artworks::get_artworks_data;
 
 pub struct RankState<'a> {
     tabs_index: usize,
@@ -27,14 +28,8 @@ pub struct RankState<'a> {
     rank_list: Arc<RwLock<Vec<Content>>>,
     tabs: Vec<&'a str>,
     queue: Vec<JoinHandle<()>>,
-    download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
 }
 
-impl DownloadInfo {
-    fn new(title: String) -> Self {
-        Self { title, progress: 0 }
-    }
-}
 
 impl<'a> RankState<'a> {
     pub fn new(tabs: Vec<&'a str>) -> Self {
@@ -44,7 +39,6 @@ impl<'a> RankState<'a> {
             rank_list: Arc::new(RwLock::new(vec![])),
             tabs,
             queue: vec![],
-            download_queue: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -126,28 +120,29 @@ impl<'a> RankState<'a> {
         self.queue.push(task);
     }
 
-    fn download(&mut self, index: usize) -> JoinHandle<()> {
+    fn download(&mut self, index: usize, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) -> JoinHandle<()> {
         let download_id = self.rank_list.read().unwrap()[index].clone().illust_id;
-        let clone_download_queue = self.download_queue.clone();
 
         tokio::spawn(async move {
-            let images = x_pixiv_lib::artworks::get_artworks_data(download_id.clone())
+            let data = get_artworks_data(download_id.clone())
                 .await
                 .unwrap();
             let mut queue = HashMap::new();
-            for (index, url) in images.images.iter().enumerate() {
-                let update_download_progress = clone_download_queue.clone();
-                let title = format!("{}-{}", images.title, index + 1);
-                let info = DownloadInfo::new(title.clone());
+
+            for (index, url) in data.images.iter().enumerate() {
+                let update_download_progress = download_queue.clone();
+                let file_name = format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]);
+                let path = PathBuf::from("./images/");
+                let info = DownloadInfo::new(data.title.clone());
                 let id = Uuid::new_v4();
 
-                clone_download_queue
+               download_queue 
                     .lock()
                     .unwrap()
                     .insert(id.clone(), info);
 
                 let task = tokio::spawn(downloader(
-                    PathBuf::from(format!("./images/{}.{}", title, &url[url.len() - 3..])),
+                    path.join(file_name),
                     url.clone(),
                     move |now_size, total_size| {
                         let mut write_update = update_download_progress.lock().unwrap();
@@ -157,12 +152,13 @@ impl<'a> RankState<'a> {
                     },
                     |_| {},
                 ));
+
                 queue.insert(id, task);
             }
 
             for (id, task) in queue {
                 task.await.unwrap().unwrap();
-                clone_download_queue.lock().unwrap().remove(&id);
+                download_queue.lock().unwrap().remove(&id);
             }
         })
     }
@@ -233,35 +229,9 @@ impl<'a> Compose for RankState<'a> {
         f.render_stateful_widget(list, check[1], &mut self.rank_list_state);
         f.render_widget(tabs, check[0]);
 
-        let size = f.size();
-        for (index, progress) in self.download_queue.lock().unwrap().values().enumerate() {
-            if size.width < 20 || size.height < ((index + 1) * 4) as u16 {
-                break;
-            } else {
-                let x = size.width - 25;
-                let y = size.height - ((index + 1) * 4) as u16;
-
-                f.render_widget(
-                    Gauge::default()
-                        .block(
-                            Block::default()
-                                .borders(Borders::ALL)
-                                .title(progress.title.clone()),
-                        )
-                        .percent(progress.progress as u16)
-                        .gauge_style(
-                            Style::default()
-                                .fg(Color::White)
-                                .bg(Color::Black)
-                                .add_modifier(Modifier::ITALIC),
-                        ),
-                    Rect::new(x, y, 20, 3),
-                );
-            }
-        }
     }
 
-    fn update(&mut self, event: &Event) {
+    fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
         match event {
             Event::Key(key_event) => match key_event.code {
                 KeyCode::Tab => {
@@ -273,14 +243,13 @@ impl<'a> Compose for RankState<'a> {
                     self.tabs_prev();
                 }
                 KeyCode::Enter => {
-                    self.download(self.rank_list_state.selected().unwrap());
+                    self.download(self.rank_list_state.selected().unwrap(), download_queue);
                 }
                 KeyCode::Down => self.list_next(),
                 KeyCode::Up => self.list_prev(),
                 KeyCode::Char('a') => {
                     let clone_len = self.rank_list.read().unwrap().len().clone();
                     for i in 0..clone_len {
-                        self.download(i);
                     }
                 }
                 _ => {}
