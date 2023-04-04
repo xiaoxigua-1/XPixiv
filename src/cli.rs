@@ -117,7 +117,17 @@ pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
     loop {
         total_progress.inc(1);
         if let Some(id) = rank.next().await? {
-            let images = get_artworks_data(id.illust_id).await?;
+            let images = match get_artworks_data(id.illust_id).await {
+                Ok(image) => image,
+                Err(e) => {
+                    progress_manager
+                        .lock()
+                        .unwrap()
+                        .println(format!("{} {}", id.title, e.status().unwrap()))
+                        .unwrap();
+                    continue;
+                }
+            };
             let mut path = PathBuf::from(&args.path);
             let mut download_qu = vec![];
             if let Some(group) = &args.path_group {
@@ -149,7 +159,7 @@ pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
                         clone_two_p.lock().unwrap().set_position(now_size);
                     };
 
-                    downloader(path_clone.join(&image_name), url_clone, progress_fn, |total_size| {
+                    if let Err(err) = downloader(path_clone.join(&image_name), url_clone, progress_fn, |total_size| {
                         let progress = ProgressBar::new(total_size);
                         *clone_progress.lock().unwrap() = clone_progress_manager.lock().unwrap().add(progress);
                         clone_progress.lock().unwrap().set_style(ProgressStyle::with_template("{spinner:.green} [{msg}] [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
@@ -157,8 +167,9 @@ pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
         .progress_chars("#>-"));
                         clone_progress.lock().unwrap().set_message(format!("{}-{}", title, index));
                     })
-                        .await
-                        .unwrap();
+                        .await {
+                        clone_progress.lock().unwrap().println(format!("{:?}", err));
+                    };
                     task_progress.lock().unwrap().finish_and_clear();
                 });
                 download_qu.push(task);
