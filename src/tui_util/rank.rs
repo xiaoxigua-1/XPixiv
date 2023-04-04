@@ -30,14 +30,14 @@ pub struct RankState<'a> {
 
 struct ArtworkInfo {
     content: Content,
-    error: Arc<RwLock<bool>>
+    error: Arc<RwLock<bool>>,
 }
 
 impl ArtworkInfo {
     fn new(content: Content) -> Self {
         Self {
             content,
-            error: Arc::new(RwLock::new(false))
+            error: Arc::new(RwLock::new(false)),
         }
     }
 }
@@ -121,7 +121,10 @@ impl<'a> RankState<'a> {
             let mut rank = x_pixiv_lib::rank::Rank::new(rank_type, false, 1..500);
             loop {
                 if let Some(content) = rank.next().await.unwrap() {
-                    rank_list_clone.write().unwrap().push(ArtworkInfo::new(content));
+                    rank_list_clone
+                        .write()
+                        .unwrap()
+                        .push(ArtworkInfo::new(content));
                 } else {
                     break;
                 }
@@ -176,7 +179,12 @@ impl<'a> Compose for RankState<'a> {
                         index + 1,
                         info.content.title,
                         info.content.illust_id
-                    )).style(if *info.error.read().unwrap() { Style::default().bg(Color::Red) } else { Style::default() })
+                    ))
+                    .style(if *info.error.read().unwrap() {
+                        Style::default().bg(Color::Red)
+                    } else {
+                        Style::default()
+                    })
                 })
                 .collect::<Vec<ListItem>>(),
         )
@@ -215,11 +223,8 @@ impl<'a> Compose for RankState<'a> {
                     let id = rank_list.read().unwrap()[index].content.illust_id;
 
                     tokio::spawn(async move {
-                        if let Err(_) = download(
-                            id,
-                            download_queue,
-                        ).await {
-                            *rank_list.write().unwrap()[index].error.write().unwrap() = true; 
+                        if let Err(_) = download(id, download_queue).await {
+                            *rank_list.write().unwrap()[index].error.write().unwrap() = true;
                         };
                     });
                 }
