@@ -44,6 +44,7 @@ fn tui() -> Result<(), io::Error> {
     let mut app_state = AppState::new(vec![
         ListItem::new("Rank Downloader"),
         ListItem::new("Artworks Downloader"),
+        ListItem::new("User Downloader"),
     ]);
 
     app_state.init();

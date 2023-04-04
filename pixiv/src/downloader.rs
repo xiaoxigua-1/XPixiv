@@ -25,7 +25,9 @@ where
         .header("referer", "https://www.pixiv.net/")
         .send()
         .await?;
-    let total_size = response.content_length().unwrap();
+    let Some(total_size) = response.content_length() else {
+        return Ok(());
+    };
     total(total_size);
     if let Ok(file) = &mut file {
         let mut byte_stream = response.bytes_stream();

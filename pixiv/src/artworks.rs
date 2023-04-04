@@ -5,8 +5,7 @@ use std::collections::HashMap;
 
 pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
     let mut images = get_artworks_image_data(id).await?;
-    let response = reqwest::get(format!("https://www.pixiv.net/artworks/{}", id))
-        .await?;
+    let response = reqwest::get(format!("https://www.pixiv.net/artworks/{}", id)).await?;
     if response.status() != 200 {
         return Err(response.error_for_status().err().unwrap());
     }

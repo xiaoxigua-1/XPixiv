@@ -2,6 +2,8 @@ mod artwork;
 mod compose;
 mod data;
 mod rank;
+mod user;
+mod util;
 
 use std::collections::HashMap;
 use std::io::Stdout;
@@ -20,7 +22,8 @@ use tui::{
 };
 use uuid::Uuid;
 
-use self::artwork::ArtworkState;
+use self::artwork::ArtworkDownloaderState;
+use self::user::UserDownloaderState;
 
 pub struct AppState<'a> {
     menu: Vec<ListItem<'a>>,
@@ -35,12 +38,14 @@ impl<'a> AppState<'a> {
         let rank_downloader_state = RankState::new(vec![
             "daily", "weekly", "monthly", "rookie", "original", "daily_ai", "male", "female",
         ]);
-        let artwork_state = ArtworkState::new();
+        let artwork_state = ArtworkDownloaderState::new();
+        let user_state = UserDownloaderState::new();
+
         Self {
             menu,
             menu_state: ListState::default(),
             focus: true,
-            contents: vec![Box::new(rank_downloader_state), Box::new(artwork_state)],
+            contents: vec![rank_downloader_state, artwork_state, user_state],
             download_queue: Arc::new(Mutex::new(HashMap::new())),
         }
     }
