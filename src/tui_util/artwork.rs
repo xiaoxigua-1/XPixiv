@@ -38,7 +38,7 @@ impl Compose for ArtworkDownloaderState {
         let focus_style = if !focus {
             Style::default().fg(Color::White)
         } else {
-            Style::default()
+            Style::default().fg(Color::DarkGray)
         };
 
         let text = Paragraph::new(self.input.clone()).block(

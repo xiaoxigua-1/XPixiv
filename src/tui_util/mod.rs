@@ -108,11 +108,10 @@ impl<'a> AppState<'a> {
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(15), Constraint::Percentage(80)].as_ref())
             .split(f.size());
-        let border_style = Style::default();
         let border_style = if self.focus {
-            border_style.fg(Color::White)
+            Style::default().fg(Color::White)
         } else {
-            border_style
+            Style::default().fg(Color::DarkGray)
         };
 
         // Menu

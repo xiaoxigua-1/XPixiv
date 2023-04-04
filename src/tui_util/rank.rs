@@ -120,11 +120,10 @@ impl<'a> RankState<'a> {
 
 impl<'a> Compose for RankState<'a> {
     fn render(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>, focus: bool, area: Rect) {
-        let border_style = Style::default();
         let border_style = if !focus {
-            border_style.fg(Color::White)
+            Style::default().fg(Color::White)
         } else {
-            border_style
+            Style::default().fg(Color::DarkGray)
         };
         let check = Layout::default()
             .direction(tui::layout::Direction::Vertical)
