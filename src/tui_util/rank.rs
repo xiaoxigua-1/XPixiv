@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, Mutex, RwLock},
 };
-use tokio::task::JoinHandle;
+use tokio::task::{JoinHandle, LocalSet};
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Rect},
@@ -120,47 +120,44 @@ impl<'a> RankState<'a> {
         self.queue.push(task);
     }
 
-    fn download(&mut self, index: usize, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) -> JoinHandle<()> {
-        let download_id = self.rank_list.read().unwrap()[index].clone().illust_id;
+    async fn download(download_id: usize, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
+        let data = get_artworks_data(download_id.clone())
+            .await
+            .unwrap();
+        let mut queue = HashMap::new();
+        
 
-        tokio::spawn(async move {
-            let data = get_artworks_data(download_id.clone())
-                .await
-                .unwrap();
-            let mut queue = HashMap::new();
+        for (index, url) in data.images.iter().enumerate() {
+            let update_download_progress = download_queue.clone();
+            let file_name = format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]);
+            let path = PathBuf::from("./images/");
+            let info = DownloadInfo::new(data.title.clone());
+            let id = Uuid::new_v4();
 
-            for (index, url) in data.images.iter().enumerate() {
-                let update_download_progress = download_queue.clone();
-                let file_name = format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]);
-                let path = PathBuf::from("./images/");
-                let info = DownloadInfo::new(data.title.clone());
-                let id = Uuid::new_v4();
+           download_queue 
+                .lock()
+                .unwrap()
+                .insert(id.clone(), info);
 
-               download_queue 
-                    .lock()
-                    .unwrap()
-                    .insert(id.clone(), info);
+            let task = tokio::spawn(downloader(
+                path.join(file_name),
+                url.clone(),
+                move |now_size, total_size| {
+                    let mut write_update = update_download_progress.lock().unwrap();
+                    let mut info = write_update[&id].clone();
+                    info.progress = ((now_size as f64 / total_size as f64) * 100.0) as u64;
+                    write_update.insert(id, info);
+                },
+                |_| {},
+            ));
 
-                let task = tokio::spawn(downloader(
-                    path.join(file_name),
-                    url.clone(),
-                    move |now_size, total_size| {
-                        let mut write_update = update_download_progress.lock().unwrap();
-                        let mut info = write_update[&id].clone();
-                        info.progress = ((now_size as f64 / total_size as f64) * 100.0) as u64;
-                        write_update.insert(id, info);
-                    },
-                    |_| {},
-                ));
+            queue.insert(id, task);
+        }
 
-                queue.insert(id, task);
-            }
-
-            for (id, task) in queue {
-                task.await.unwrap().unwrap();
-                download_queue.lock().unwrap().remove(&id);
-            }
-        })
+        for (id, task) in queue {
+            task.await.unwrap().unwrap();
+            download_queue.lock().unwrap().remove(&id);
+        }
     }
 }
 
@@ -243,14 +240,20 @@ impl<'a> Compose for RankState<'a> {
                     self.tabs_prev();
                 }
                 KeyCode::Enter => {
-                    self.download(self.rank_list_state.selected().unwrap(), download_queue);
+                    tokio::spawn(RankState::download(self.rank_list.read().unwrap()[self.rank_list_state.selected().unwrap()].illust_id, download_queue));
                 }
                 KeyCode::Down => self.list_next(),
                 KeyCode::Up => self.list_prev(),
                 KeyCode::Char('a') => {
                     let clone_len = self.rank_list.read().unwrap().len().clone();
-                    for i in 0..clone_len {
-                    }
+                    let rank_list = self.rank_list.clone();
+
+                    tokio::spawn(async move {
+                        for i in 0..clone_len {
+                            let id = rank_list.read().unwrap()[i].illust_id;
+                            RankState::download(id, download_queue.clone()).await;
+                        }
+                    });
                 }
                 _ => {}
             },

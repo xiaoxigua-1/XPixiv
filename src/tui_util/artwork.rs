@@ -33,7 +33,7 @@ impl ArtworkState {
             tokio::spawn(async move {
                 let data = get_artworks_data(id).await.unwrap();
                 let mut queue = HashMap::new();
-                let path = PathBuf::from(".");
+                let path = PathBuf::from("./images/");
 
                 for (index, url) in data.images.iter().enumerate() {
                     let update_download_progress = download_queue.clone();
@@ -80,7 +80,8 @@ impl Compose for ArtworkState {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(focus_style),
+                .border_style(focus_style)
+                .title("input artwork id (Enter download)"),
         );
 
         f.set_cursor(check[0].x + self.input.len() as u16 + 1, check[0].y + 1);
