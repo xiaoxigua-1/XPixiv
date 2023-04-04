@@ -61,7 +61,6 @@ jobs:
           key: ${{ matrix.target }}
 
       - name: Build binary
-        if: matrix.target != 'aarch64-unknown-linux-gnu'
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: build
