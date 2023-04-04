@@ -31,7 +31,7 @@ impl ArtworkState {
     fn download(&mut self, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
         if let Ok(id) = self.input.clone().parse::<usize>() {
             tokio::spawn(async move {
-                let data = get_artworks_data(id).await.unwrap();
+                let data = get_artworks_data(id).await?;
                 let mut queue = HashMap::new();
                 let path = PathBuf::from("./images/");
 
@@ -58,10 +58,12 @@ impl ArtworkState {
                 }
 
                 for (id, task) in queue {
-                    task.await.unwrap().unwrap();
+                    task.await.unwrap()?;
 
                     download_queue.lock().unwrap().remove(&id);
                 }
+
+                Ok::<(), x_pixiv_lib::Error>(())
             });
         }
     }

@@ -207,7 +207,8 @@ impl<'a> Compose for RankState<'a> {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(border_style)
-                .border_type(BorderType::Rounded),
+                .border_type(BorderType::Rounded)
+                .title("(Enter download)"),
         )
         .style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_style(
