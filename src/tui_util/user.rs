@@ -127,7 +127,8 @@ impl Compose for UserDownloaderState {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(focus_style),
+                .border_style(focus_style)
+                .title("(Enter download selected) (`a` download all)"),
         )
         .highlight_style(Style::default().bg(Color::Gray));
 
