@@ -23,9 +23,23 @@ use x_pixiv_lib::data::Content;
 pub struct RankState<'a> {
     tabs_index: usize,
     rank_list_state: ListState,
-    rank_list: Arc<RwLock<Vec<Content>>>,
+    rank_list: Arc<RwLock<Vec<ArtworkInfo>>>,
     tabs: Vec<&'a str>,
     queue: Vec<JoinHandle<()>>,
+}
+
+struct ArtworkInfo {
+    content: Content,
+    error: Arc<RwLock<bool>>
+}
+
+impl ArtworkInfo {
+    fn new(content: Content) -> Self {
+        Self {
+            content,
+            error: Arc::new(RwLock::new(false))
+        }
+    }
 }
 
 impl<'a> RankState<'a> {
@@ -107,7 +121,7 @@ impl<'a> RankState<'a> {
             let mut rank = x_pixiv_lib::rank::Rank::new(rank_type, false, 1..500);
             loop {
                 if let Some(content) = rank.next().await.unwrap() {
-                    rank_list_clone.write().unwrap().push(content);
+                    rank_list_clone.write().unwrap().push(ArtworkInfo::new(content));
                 } else {
                     break;
                 }
@@ -156,13 +170,13 @@ impl<'a> Compose for RankState<'a> {
                 .unwrap()
                 .iter()
                 .enumerate()
-                .map(|(index, content)| {
+                .map(|(index, info)| {
                     ListItem::new(format!(
                         "{: <3} |{} https://www.pixiv.net/artworks/{}",
                         index + 1,
-                        content.title,
-                        content.illust_id
-                    ))
+                        info.content.title,
+                        info.content.illust_id
+                    )).style(if *info.error.read().unwrap() { Style::default().bg(Color::Red) } else { Style::default() })
                 })
                 .collect::<Vec<ListItem>>(),
         )
@@ -196,11 +210,18 @@ impl<'a> Compose for RankState<'a> {
                     self.tabs_prev();
                 }
                 KeyCode::Enter => {
-                    tokio::spawn(download(
-                        self.rank_list.read().unwrap()[self.rank_list_state.selected().unwrap()]
-                            .illust_id,
-                        download_queue,
-                    ));
+                    let index = self.rank_list_state.selected().unwrap();
+                    let rank_list = self.rank_list.clone();
+                    let id = rank_list.read().unwrap()[index].content.illust_id;
+
+                    tokio::spawn(async move {
+                        if let Err(_) = download(
+                            id,
+                            download_queue,
+                        ).await {
+                            *rank_list.write().unwrap()[index].error.write().unwrap() = true; 
+                        };
+                    });
                 }
                 KeyCode::Down => self.list_next(),
                 KeyCode::Up => self.list_prev(),
@@ -210,8 +231,10 @@ impl<'a> Compose for RankState<'a> {
 
                     tokio::spawn(async move {
                         for i in 0..clone_len {
-                            let id = rank_list.read().unwrap()[i].illust_id;
-                            download(id, download_queue.clone()).await.unwrap();
+                            let id = rank_list.read().unwrap()[i].content.illust_id;
+                            if let Err(_) = download(id, download_queue.clone()).await {
+                                *rank_list.write().unwrap()[i].error.write().unwrap() = true;
+                            };
                         }
                     });
                 }
