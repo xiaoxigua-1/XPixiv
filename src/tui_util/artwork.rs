@@ -36,12 +36,17 @@ impl Compose for ArtworkState {
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Max(2)])
             .split(area);
+        let focus_style = if !focus {
+            Style::default().fg(Color::White)
+        } else {
+            Style::default()
+        };
 
         let text = Paragraph::new(self.input.clone()).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::White)),
+                .border_style(focus_style),
         );
 
         f.set_cursor(check[0].x + self.input.len() as u16 + 1, check[0].y + 1);
