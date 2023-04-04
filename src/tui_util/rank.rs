@@ -39,7 +39,7 @@ impl ArtworkInfo {
         Self {
             content,
             error: Arc::new(RwLock::new(false)),
-            downloading: Arc::new(RwLock::new(false)) 
+            downloading: Arc::new(RwLock::new(false)),
         }
     }
 }
@@ -182,13 +182,15 @@ impl<'a> Compose for RankState<'a> {
                         info.content.title,
                         info.content.illust_id
                     ))
-                    .style(Style::default().bg(if *info.error.read().unwrap() {
-                        Color::Red
-                    } else if *info.downloading.read().unwrap() {
-                        Color::LightGreen
-                    } else {
-                        Color::Reset
-                    }))
+                    .style(Style::default().bg(
+                        if *info.error.read().unwrap() {
+                            Color::Red
+                        } else if *info.downloading.read().unwrap() {
+                            Color::LightGreen
+                        } else {
+                            Color::Reset
+                        },
+                    ))
                 })
                 .collect::<Vec<ListItem>>(),
         )
@@ -226,13 +228,19 @@ impl<'a> Compose for RankState<'a> {
                     let rank_list = self.rank_list.clone();
                     let id = rank_list.read().unwrap()[index].content.illust_id;
 
-                    *rank_list.write().unwrap()[index].downloading.write().unwrap() = true;
+                    *rank_list.write().unwrap()[index]
+                        .downloading
+                        .write()
+                        .unwrap() = true;
 
                     tokio::spawn(async move {
                         if let Err(_) = download(id, download_queue).await {
                             *rank_list.write().unwrap()[index].error.write().unwrap() = true;
                         };
-                        *rank_list.write().unwrap()[index].downloading.write().unwrap() = false;
+                        *rank_list.write().unwrap()[index]
+                            .downloading
+                            .write()
+                            .unwrap() = false;
                     });
                 }
                 KeyCode::Down => self.list_next(),
