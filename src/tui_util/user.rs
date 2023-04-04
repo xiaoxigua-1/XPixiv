@@ -128,7 +128,8 @@ impl Compose for UserDownloaderState {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(focus_style),
-        ).highlight_style(Style::default().bg(Color::Gray));
+        )
+        .highlight_style(Style::default().bg(Color::Gray));
 
         if self.artowrks_state.selected().is_none() {
             f.set_cursor(check[0].x + self.input.len() as u16 + 1, check[0].y + 1);
@@ -147,7 +148,7 @@ impl Compose for UserDownloaderState {
                         self.input.push(c);
                     } else if c == 'a' {
                         let artworks = self.artworks.clone();
-                        let len = self.artworks.read().unwrap().len().clone(); 
+                        let len = self.artworks.read().unwrap().len().clone();
                         tokio::spawn(async move {
                             for i in 0..len {
                                 let id = artworks.read().unwrap()[i];
@@ -172,7 +173,7 @@ impl Compose for UserDownloaderState {
                 }
                 KeyCode::Down => {
                     self.next();
-                } 
+                }
                 _ => {}
             }
         }

@@ -1,29 +1,43 @@
+#[cfg(feature = "cli")]
 use clap::Parser;
+#[cfg(feature = "cli")]
 use cli::{artwork_download, rank_downloader, user_download, Cli, Commands};
+#[cfg(feature = "tui")]
 use crossterm::{
     event::{read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+#[cfg(feature = "tui")]
 use std::{io, time::Duration};
+#[cfg(feature = "tui")]
 use tui::{backend::CrosstermBackend, widgets::ListItem, Terminal};
+#[cfg(feature = "tui")]
 use tui_util::AppState;
 
+#[cfg(feature = "cli")]
 mod cli;
+#[cfg(feature = "tui")]
 mod tui_util;
 
 #[tokio::main]
 async fn main() -> x_pixiv_lib::Result<()> {
     match std::env::args().len() {
         1 => {
+            #[cfg(feature = "tui")]
             tui().unwrap();
         }
-        _ => cli().await?,
+        _ =>
+        {
+            #[cfg(feature = "cli")]
+            cli().await?
+        }
     };
 
     Ok(())
 }
 
+#[cfg(feature = "cli")]
 async fn cli() -> x_pixiv_lib::Result<()> {
     let cli = Cli::parse();
     match &cli.command {
@@ -35,6 +49,7 @@ async fn cli() -> x_pixiv_lib::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "tui")]
 fn tui() -> Result<(), io::Error> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
