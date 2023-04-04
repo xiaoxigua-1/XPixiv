@@ -1,5 +1,6 @@
 use crate::cli::parse_agrs_type;
 use crate::tui_util::compose::Compose;
+use crate::tui_util::data::DownloadInfo;
 use crossterm::event::{Event, KeyCode, MouseEventKind};
 use std::{
     collections::HashMap,
@@ -19,12 +20,6 @@ use tui::{
 use uuid::Uuid;
 use x_pixiv_lib::data::Content;
 use x_pixiv_lib::downloader::downloader;
-
-#[derive(Clone)]
-struct DownloadInfo {
-    title: String,
-    progress: u64,
-}
 
 pub struct RankState<'a> {
     tabs_index: usize,

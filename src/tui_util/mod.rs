@@ -1,4 +1,6 @@
+mod artwork;
 mod compose;
+mod data;
 mod rank;
 
 use std::io::Stdout;
@@ -14,6 +16,8 @@ use tui::{
     Frame,
 };
 
+use self::artwork::ArtworkState;
+
 pub struct AppState<'a> {
     menu: Vec<ListItem<'a>>,
     menu_state: ListState,
@@ -26,11 +30,12 @@ impl<'a> AppState<'a> {
         let rank_downloader_state = RankState::new(vec![
             "daily", "weekly", "monthly", "rookie", "original", "daily_ai", "male", "female",
         ]);
+        let artwork_state = ArtworkState::new();
         Self {
             menu,
             menu_state: ListState::default(),
             focus: true,
-            contents: vec![Box::new(rank_downloader_state)],
+            contents: vec![Box::new(rank_downloader_state), Box::new(artwork_state)],
         }
     }
 
