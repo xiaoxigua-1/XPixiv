@@ -1,6 +1,4 @@
 use crossterm::event::Event;
-use x_pixiv_lib::artworks::get_artworks_data;
-use x_pixiv_lib::downloader::downloader;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, io::Stdout};
@@ -12,6 +10,8 @@ use tui::{
     Frame,
 };
 use uuid::Uuid;
+use x_pixiv_lib::artworks::get_artworks_data;
+use x_pixiv_lib::downloader::downloader;
 
 use super::compose::Compose;
 use crate::tui_util::data::DownloadInfo;
@@ -27,7 +27,7 @@ impl ArtworkState {
             input: String::new(),
         }
     }
-    
+
     fn download(&mut self, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
         if let Ok(id) = self.input.clone().parse::<usize>() {
             tokio::spawn(async move {
@@ -39,15 +39,20 @@ impl ArtworkState {
                     let update_download_progress = download_queue.clone();
                     let id = Uuid::new_v4();
                     let info = DownloadInfo::new(data.title.clone());
-                    let file_name = format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]); 
+                    let file_name = format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]);
                     download_queue.lock().unwrap().insert(id.clone(), info);
-                    
-                    let task = tokio::spawn(downloader(path.join(file_name), url.clone(), move |now_size, total_size| {
-                        let mut write_update = update_download_progress.lock().unwrap();
-                        let mut info = write_update[&id].clone();
-                        info.progress = ((now_size as f64 / total_size as f64) * 100.0) as u64;
-                        write_update.insert(id, info);
-                    }, |_| {}));
+
+                    let task = tokio::spawn(downloader(
+                        path.join(file_name),
+                        url.clone(),
+                        move |now_size, total_size| {
+                            let mut write_update = update_download_progress.lock().unwrap();
+                            let mut info = write_update[&id].clone();
+                            info.progress = ((now_size as f64 / total_size as f64) * 100.0) as u64;
+                            write_update.insert(id, info);
+                        },
+                        |_| {},
+                    ));
 
                     queue.insert(id, task);
                 }
@@ -88,7 +93,11 @@ impl Compose for ArtworkState {
         f.render_widget(text, check[0]);
     }
 
-    fn update(&mut self, event: &crossterm::event::Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
+    fn update(
+        &mut self,
+        event: &crossterm::event::Event,
+        download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
+    ) {
         if let Event::Key(code) = event {
             match code.code {
                 KeyCode::Char(c) => {
@@ -100,7 +109,7 @@ impl Compose for ArtworkState {
                     self.input.pop();
                 }
                 KeyCode::Enter => {
-                    self.download(download_queue);                
+                    self.download(download_queue);
                 }
                 _ => {}
             }

@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, Mutex, RwLock},
 };
-use tokio::task::{JoinHandle, LocalSet};
+use tokio::task::JoinHandle;
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Rect},
@@ -18,9 +18,9 @@ use tui::{
     Frame,
 };
 use uuid::Uuid;
+use x_pixiv_lib::artworks::get_artworks_data;
 use x_pixiv_lib::data::Content;
 use x_pixiv_lib::downloader::downloader;
-use x_pixiv_lib::artworks::get_artworks_data;
 
 pub struct RankState<'a> {
     tabs_index: usize,
@@ -29,7 +29,6 @@ pub struct RankState<'a> {
     tabs: Vec<&'a str>,
     queue: Vec<JoinHandle<()>>,
 }
-
 
 impl<'a> RankState<'a> {
     pub fn new(tabs: Vec<&'a str>) -> Self {
@@ -121,11 +120,8 @@ impl<'a> RankState<'a> {
     }
 
     async fn download(download_id: usize, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
-        let data = get_artworks_data(download_id.clone())
-            .await
-            .unwrap();
+        let data = get_artworks_data(download_id.clone()).await.unwrap();
         let mut queue = HashMap::new();
-        
 
         for (index, url) in data.images.iter().enumerate() {
             let update_download_progress = download_queue.clone();
@@ -134,10 +130,7 @@ impl<'a> RankState<'a> {
             let info = DownloadInfo::new(data.title.clone());
             let id = Uuid::new_v4();
 
-           download_queue 
-                .lock()
-                .unwrap()
-                .insert(id.clone(), info);
+            download_queue.lock().unwrap().insert(id.clone(), info);
 
             let task = tokio::spawn(downloader(
                 path.join(file_name),
@@ -225,7 +218,6 @@ impl<'a> Compose for RankState<'a> {
 
         f.render_stateful_widget(list, check[1], &mut self.rank_list_state);
         f.render_widget(tabs, check[0]);
-
     }
 
     fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
@@ -240,7 +232,11 @@ impl<'a> Compose for RankState<'a> {
                     self.tabs_prev();
                 }
                 KeyCode::Enter => {
-                    tokio::spawn(RankState::download(self.rank_list.read().unwrap()[self.rank_list_state.selected().unwrap()].illust_id, download_queue));
+                    tokio::spawn(RankState::download(
+                        self.rank_list.read().unwrap()[self.rank_list_state.selected().unwrap()]
+                            .illust_id,
+                        download_queue,
+                    ));
                 }
                 KeyCode::Down => self.list_next(),
                 KeyCode::Up => self.list_prev(),

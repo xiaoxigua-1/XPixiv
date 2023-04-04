@@ -3,22 +3,22 @@ mod compose;
 mod data;
 mod rank;
 
+use std::collections::HashMap;
 use std::io::Stdout;
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 
-use uuid::Uuid;
-use data::DownloadInfo;
 use crate::tui_util::compose::Compose;
 use crossterm::event::{Event, KeyCode};
+use data::DownloadInfo;
 use rank::RankState;
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Gauge},
+    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, ListState},
     Frame,
 };
+use uuid::Uuid;
 
 use self::artwork::ArtworkState;
 
@@ -41,7 +41,7 @@ impl<'a> AppState<'a> {
             menu_state: ListState::default(),
             focus: true,
             contents: vec![Box::new(rank_downloader_state), Box::new(artwork_state)],
-            download_queue: Arc::new(Mutex::new(HashMap::new())) 
+            download_queue: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -132,7 +132,6 @@ impl<'a> AppState<'a> {
         if let Some(content) = self.contents.get_mut(index) {
             content.render(f, self.focus, chunks[1]);
         }
-
 
         let size = f.size();
         for (index, progress) in self.download_queue.lock().unwrap().values().enumerate() {

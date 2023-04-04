@@ -1,9 +1,9 @@
+use crate::tui_util::data::DownloadInfo;
 use crossterm::event::Event;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, io::Stdout};
-use uuid::Uuid;
-use crate::tui_util::data::DownloadInfo;
 use tui::{backend::CrosstermBackend, layout::Rect, Frame};
+use uuid::Uuid;
 
 pub trait Compose {
     fn render(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>, focus: bool, area: Rect);
