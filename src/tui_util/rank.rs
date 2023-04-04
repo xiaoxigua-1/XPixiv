@@ -211,7 +211,7 @@ impl<'a> Compose for RankState<'a> {
                     tokio::spawn(async move {
                         for i in 0..clone_len {
                             let id = rank_list.read().unwrap()[i].illust_id;
-                            download(id, download_queue.clone()).await;
+                            download(id, download_queue.clone()).await.unwrap();
                         }
                     });
                 }

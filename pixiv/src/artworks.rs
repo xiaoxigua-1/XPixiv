@@ -5,11 +5,11 @@ use std::collections::HashMap;
 
 pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
     let mut images = get_artworks_image_data(id).await?;
-    let response = reqwest::get(format!("https://www.pixiv.net/artworks/{}", id)).await?;
-    if response.status() != 200 {
-        return Err(response.error_for_status().err().unwrap());
-    }
-    let html = response.text().await?;
+    let html = reqwest::get(format!("https://www.pixiv.net/artworks/{}", id))
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
     let parser = Html::parse_document(&html);
     let selector = Selector::parse("#meta-preload-data").unwrap();
     let element = parser.select(&selector).next().unwrap();
@@ -25,6 +25,7 @@ pub async fn get_artworks_data(id: usize) -> reqwest::Result<ArtworksData> {
 pub async fn get_artworks_image_data(id: usize) -> reqwest::Result<Vec<String>> {
     let mut data = reqwest::get(format!("https://www.pixiv.net/ajax/illust/{}/pages", id))
         .await?
+        .error_for_status()?
         .json::<Api<Vec<ArtworkPagesData>>>()
         .await?;
     let images = data

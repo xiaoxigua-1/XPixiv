@@ -8,8 +8,11 @@ use x_pixiv_lib::{artworks::get_artworks_data, downloader::downloader};
 
 use super::data::DownloadInfo;
 
-pub async fn download(download_id: usize, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
-    let data = get_artworks_data(download_id.clone()).await.unwrap();
+pub async fn download(
+    download_id: usize,
+    download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
+) -> x_pixiv_lib::Result<()> {
+    let data = get_artworks_data(download_id.clone()).await?;
     let mut queue = HashMap::new();
 
     for (index, url) in data.images.iter().enumerate() {
@@ -37,7 +40,9 @@ pub async fn download(download_id: usize, download_queue: Arc<Mutex<HashMap<Uuid
     }
 
     for (id, task) in queue {
-        task.await.unwrap().unwrap();
+        task.await.unwrap()?;
         download_queue.lock().unwrap().remove(&id);
     }
+
+    Ok(())
 }

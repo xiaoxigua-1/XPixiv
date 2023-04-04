@@ -186,7 +186,12 @@ pub async fn artwork_download(args: &ArtworkArgs) -> x_pixiv_lib::Result<()> {
         let progress = Arc::new(Mutex::new(ProgressBar::hidden()));
         let clone_progress = progress.clone();
 
-        output_path.push(format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]));
+        output_path.push(format!(
+            "{}-{}.{}",
+            data.title,
+            index,
+            &url[url.len() - 3..]
+        ));
 
         downloader(output_path, url.clone(), |now, _| {
             progress.lock().unwrap().set_position(now);

@@ -17,12 +17,14 @@ use crossterm::event::KeyCode;
 
 pub struct ArtworkDownloaderState {
     input: String,
+    error: Arc<Mutex<bool>>,
 }
 
 impl ArtworkDownloaderState {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             input: String::new(),
+            error: Arc::new(Mutex::new(false)),
         })
     }
 }
@@ -35,7 +37,9 @@ impl Compose for ArtworkDownloaderState {
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Max(2)])
             .split(area);
-        let focus_style = if !focus {
+        let focus_style = if *self.error.lock().unwrap() {
+            Style::default().fg(Color::Red)
+        } else if !focus {
             Style::default().fg(Color::White)
         } else {
             Style::default().fg(Color::DarkGray)
@@ -61,6 +65,7 @@ impl Compose for ArtworkDownloaderState {
         if let Event::Key(code) = event {
             match code.code {
                 KeyCode::Char(c) => {
+                    *self.error.lock().unwrap() = false;
                     if ('0'..'9').contains(&c) {
                         self.input.push(c);
                     }
@@ -72,7 +77,12 @@ impl Compose for ArtworkDownloaderState {
                     let Ok(id) = self.input.parse::<usize>() else {
                         return;
                     };
-                    tokio::spawn(download(id, download_queue));
+                    let clone_error = self.error.clone();
+                    tokio::spawn(async move {
+                        if let Err(_) = download(id, download_queue).await {
+                            *clone_error.lock().unwrap() = true;
+                        };
+                    });
                 }
                 _ => {}
             }

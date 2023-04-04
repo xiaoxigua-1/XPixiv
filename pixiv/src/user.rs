@@ -17,6 +17,7 @@ impl User {
             self.id
         ))
         .await?
+        .error_for_status()?
         .json::<Api<Illusts<HashMap<usize, Option<bool>>>>>()
         .await?;
         let images = data

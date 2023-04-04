@@ -19,8 +19,23 @@ use crossterm::event::KeyCode;
 
 pub struct UserDownloaderState {
     input: String,
-    artworks: Arc<RwLock<Vec<usize>>>,
+    artworks: Arc<RwLock<Vec<ArtworkInfo>>>,
     artowrks_state: ListState,
+    error: Arc<Mutex<bool>>,
+}
+
+struct ArtworkInfo {
+    id: usize,
+    error: Arc<RwLock<bool>>,
+}
+
+impl ArtworkInfo {
+    fn new(id: usize) -> Self {
+        Self {
+            id,
+            error: Arc::new(RwLock::new(false)),
+        }
+    }
 }
 
 impl UserDownloaderState {
@@ -29,6 +44,7 @@ impl UserDownloaderState {
             input: String::new(),
             artworks: Arc::new(RwLock::new(vec![])),
             artowrks_state: ListState::default(),
+            error: Arc::new(Mutex::new(false)),
         })
     }
 
@@ -38,15 +54,17 @@ impl UserDownloaderState {
         };
         let user = User::new(id);
         let clone_user_artworks = self.artworks.clone();
+        let clone_error = self.error.clone();
 
         tokio::spawn(async move {
-            let Ok(mut ids) = user.get_artworks().await else {
+            let Ok(ids) = user.get_artworks().await else {
+                *clone_error.lock().unwrap() = true;
                 return;
             };
             let mut write = clone_user_artworks.write().unwrap();
 
             write.clear();
-            write.append(&mut ids);
+            write.append(&mut ids.iter().map(|id| ArtworkInfo::new(id.clone())).collect());
         });
     }
 
@@ -101,7 +119,9 @@ impl Compose for UserDownloaderState {
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Max(2)])
             .split(area);
-        let focus_style = if !focus {
+        let focus_style = if *self.error.lock().unwrap() {
+            Style::default().fg(Color::Red)
+        } else if !focus {
             Style::default().fg(Color::White)
         } else {
             Style::default().fg(Color::DarkGray)
@@ -120,7 +140,15 @@ impl Compose for UserDownloaderState {
                 .read()
                 .unwrap()
                 .iter()
-                .map(|item| ListItem::new(format!("https://www.pixiv.net/artworks/{}", item)))
+                .map(|item| {
+                    ListItem::new(format!("https://www.pixiv.net/artworks/{}", item.id)).style(
+                        if *item.error.read().unwrap() {
+                            Style::default().bg(Color::Red)
+                        } else {
+                            Style::default()
+                        },
+                    )
+                })
                 .collect::<Vec<_>>(),
         )
         .block(
@@ -145,15 +173,21 @@ impl Compose for UserDownloaderState {
         if let Event::Key(code) = event {
             match code.code {
                 KeyCode::Char(c) => {
+                    *self.error.lock().unwrap() = false;
                     if ('0'..'9').contains(&c) && self.artowrks_state.selected().is_none() {
                         self.input.push(c);
                     } else if c == 'a' {
                         let artworks = self.artworks.clone();
                         let len = self.artworks.read().unwrap().len().clone();
+
                         tokio::spawn(async move {
                             for i in 0..len {
-                                let id = artworks.read().unwrap()[i];
-                                download(id, download_queue.clone()).await;
+                                let id = artworks.read().unwrap()[i].id.clone();
+                                if let Err(_) = download(id, download_queue.clone()).await {
+                                    *artworks.write().unwrap()[i].error.write().unwrap() = true;
+                                } else {
+                                    *artworks.write().unwrap()[i].error.write().unwrap() = false;
+                                };
                             }
                         });
                     }
@@ -163,8 +197,13 @@ impl Compose for UserDownloaderState {
                 }
                 KeyCode::Enter => {
                     if let Some(i) = self.artowrks_state.selected() {
-                        let id = self.artworks.read().unwrap()[i];
-                        tokio::spawn(download(id, download_queue));
+                        let id = self.artworks.read().unwrap()[i].id.clone();
+                        let artworks = self.artworks.clone();
+                        tokio::spawn(async move {
+                            if let Err(_) = download(id, download_queue).await {
+                                *artworks.write().unwrap()[i].error.write().unwrap() = true;
+                            };
+                        });
                     } else {
                         self.get_user_all_artwork();
                     }
