@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write, fmt::Display};
+use std::{fmt::Display, fs::File, io::Write};
 
 use serde::{Deserialize, Serialize};
 
@@ -48,9 +48,13 @@ impl Display for GroupType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use GroupType::*;
 
-        write!(f, "{}", match self {
-            Author => "author",
-            Artwork => "artwork"
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Author => "author",
+                Artwork => "artwork",
+            }
+        )
     }
 }

@@ -10,7 +10,12 @@ use super::data::ConfigData;
 pub trait Compose {
     fn render(&mut self, f: &mut Frame<CrosstermBackend<Stdout>>, focus: bool, area: Rect);
 
-    fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>, config: ConfigData);
+    fn update(
+        &mut self,
+        event: &Event,
+        download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
+        config: ConfigData,
+    );
 
     fn init(&mut self);
 }

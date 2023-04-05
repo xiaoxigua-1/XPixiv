@@ -6,12 +6,12 @@ use std::{
 use uuid::Uuid;
 use x_pixiv_lib::{artworks::get_artworks_data, downloader::downloader};
 
-use super::data::{DownloadInfo, ConfigData, GroupType};
+use super::data::{ConfigData, DownloadInfo, GroupType};
 
 pub async fn download(
     download_id: usize,
     download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
-    config: ConfigData
+    config: ConfigData,
 ) -> x_pixiv_lib::Result<()> {
     let data = get_artworks_data(download_id).await?;
     let mut queue = HashMap::new();
@@ -26,7 +26,7 @@ pub async fn download(
         if let Some(group) = &config.group_type {
             let group = match group {
                 GroupType::Artwork => format!("{}-{}/", data.title, download_id),
-                GroupType::Author => format!("{}/", data.user_name)
+                GroupType::Author => format!("{}/", data.user_name),
             };
 
             path.push(group);

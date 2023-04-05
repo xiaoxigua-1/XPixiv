@@ -2,9 +2,11 @@ use crossterm::event::{Event, KeyCode};
 use std::io::Stdout;
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect, Margin},
+    layout::{Constraint, Direction, Layout, Margin, Rect},
+    style::{Color, Style},
+    text::{Span, Spans},
     widgets::{Block, Borders, Paragraph},
-    Frame, style::{Style, Color}, text::{Spans, Span},
+    Frame,
 };
 
 use crate::tui_util::data::ConfigData;
@@ -37,17 +39,27 @@ impl ConfigItem for OutputConfig {
             .split(area);
         let forcu_style = Style::default().fg(if forcu { Color::White } else { Color::DarkGray });
         let config_name = Paragraph::new("Output Path").style(forcu_style);
-        let input =
-            Paragraph::new(self.input.clone()).block(Block::default().borders(Borders::ALL).style(forcu_style).title(Spans::from(vec![
-                Span::styled("Enter ", Style::default().fg(Color::Red)),
-                Span::raw(if !self.edit { "Edit" } else { "Save" })
-            ])));
+        let input = Paragraph::new(self.input.clone()).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(forcu_style)
+                .title(Spans::from(vec![
+                    Span::styled("Enter ", Style::default().fg(Color::Red)),
+                    Span::raw(if !self.edit { "Edit" } else { "Save" }),
+                ])),
+        );
 
         if self.edit {
             f.set_cursor(check[1].x + self.input.len() as u16 + 1, check[1].y + 1);
         }
 
-        f.render_widget(config_name, check[0].inner(&Margin { horizontal: 1, vertical: 1 }));
+        f.render_widget(
+            config_name,
+            check[0].inner(&Margin {
+                horizontal: 1,
+                vertical: 1,
+            }),
+        );
         f.render_widget(input, check[1]);
     }
 

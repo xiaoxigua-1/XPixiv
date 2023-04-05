@@ -62,7 +62,7 @@ impl Compose for ArtworkDownloaderState {
         &mut self,
         event: &crossterm::event::Event,
         download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
-        config: ConfigData
+        config: ConfigData,
     ) {
         if let Event::Key(code) = event {
             match code.code {

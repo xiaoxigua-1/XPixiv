@@ -174,7 +174,12 @@ impl Compose for UserDownloaderState {
         f.render_stateful_widget(list, check[1], &mut self.artowrks_state);
     }
 
-    fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>, config: ConfigData) {
+    fn update(
+        &mut self,
+        event: &Event,
+        download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
+        config: ConfigData,
+    ) {
         if let Event::Key(code) = event {
             match code.code {
                 KeyCode::Char(c) => {
@@ -184,12 +189,13 @@ impl Compose for UserDownloaderState {
                     } else if c == 'a' {
                         let artworks = self.artworks.clone();
                         let len = self.artworks.read().unwrap().len();
-                            
 
                         tokio::spawn(async move {
                             for i in 0..len {
                                 let id = artworks.read().unwrap()[i].id;
-                                if (download(id, download_queue.clone(), config.clone()).await).is_err() {
+                                if (download(id, download_queue.clone(), config.clone()).await)
+                                    .is_err()
+                                {
                                     artworks.write().unwrap()[i].error = true;
                                 } else {
                                     artworks.write().unwrap()[i].error = false;

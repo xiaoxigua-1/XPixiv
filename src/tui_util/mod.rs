@@ -113,7 +113,11 @@ impl<'a> AppState<'a> {
                 }
             }
         } else if let Some(content) = self.contents.get_mut(self.menu_state.selected().unwrap()) {
-            content.update(event, self.download_queue.clone(), self.config.config_data.clone());
+            content.update(
+                event,
+                self.download_queue.clone(),
+                self.config.config_data.clone(),
+            );
         }
     }
 

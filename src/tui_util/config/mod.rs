@@ -1,7 +1,7 @@
-mod output;
 mod group;
+mod output;
 
-use self::{output::OutputConfig, group::GroupConfig};
+use self::{group::GroupConfig, output::OutputConfig};
 
 use super::data::ConfigData;
 
@@ -27,7 +27,8 @@ pub struct Config {
 
 impl Config {
     pub fn new(config_data: ConfigData) -> Self {
-        let mut config_items: Vec<Box<dyn ConfigItem>> = vec![OutputConfig::new(), GroupConfig::new()];
+        let mut config_items: Vec<Box<dyn ConfigItem>> =
+            vec![OutputConfig::new(), GroupConfig::new()];
 
         config_items.iter_mut().for_each(|item| {
             item.init(&config_data);
@@ -92,8 +93,7 @@ impl Config {
             }
         }
 
-        config_items.lock().unwrap()[self.state.selected()]
-            .update(&mut self.config_data, event);
+        config_items.lock().unwrap()[self.state.selected()].update(&mut self.config_data, event);
     }
 
     fn next(&mut self) {
