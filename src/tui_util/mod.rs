@@ -35,7 +35,8 @@ pub struct AppState<'a> {
     pub contents: Vec<Box<dyn Compose>>,
     pub focus: bool,
     download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
-    config: Config
+    config: Config,
+    pub config_open: bool
 }
 
 impl<'a> AppState<'a> {
@@ -62,7 +63,8 @@ impl<'a> AppState<'a> {
             focus: true,
             contents: vec![rank_downloader_state, artwork_state, user_state],
             download_queue: Arc::new(Mutex::new(HashMap::new())),
-            config: Config::new(config_data)
+            config: Config::new(config_data),
+            config_open: false
         }
     }
 
@@ -104,7 +106,9 @@ impl<'a> AppState<'a> {
     }
 
     pub fn update(&mut self, event: &Event) {
-        if self.focus {
+        if self.config_open {
+            self.config.update(event);
+        } else if self.focus {
             if let Event::Key(key_event) = event {
                 match key_event.code {
                     KeyCode::Down => self.next(),
@@ -178,6 +182,9 @@ impl<'a> AppState<'a> {
                     Rect::new(x, y, 20, 3),
                 );
             }
+        }
+        if self.config_open {
+            self.config.render(f);
         }
     }
 }
