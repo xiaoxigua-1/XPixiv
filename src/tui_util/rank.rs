@@ -23,11 +23,12 @@ use x_pixiv_lib::data::Content;
 pub struct RankState<'a> {
     tabs_index: usize,
     rank_list_state: ListState,
-    rank_list: Arc<RwLock<Vec<ArtworkInfo>>>,
+    rank_list: Arc<RwLock<Vec<Vec<ArtworkInfo>>>>,
     tabs: Vec<&'a str>,
-    queue: Vec<JoinHandle<()>>,
+    queue: Vec<Vec<JoinHandle<()>>>,
 }
 
+#[derive(Clone)]
 struct ArtworkInfo {
     content: Content,
     error: bool,
@@ -49,9 +50,9 @@ impl<'a> RankState<'a> {
         Box::new(Self {
             tabs_index: 0,
             rank_list_state: ListState::default(),
-            rank_list: Arc::new(RwLock::new(vec![])),
+            rank_list: Arc::new(RwLock::new(vec![vec![];8])),
             tabs,
-            queue: vec![],
+            queue: vec![vec![], vec![], vec![], vec![], vec![], vec![], vec![], vec![]],
         })
     }
 
@@ -73,13 +74,13 @@ impl<'a> RankState<'a> {
 
     fn list_next(&mut self) {
         let i = match self.rank_list_state.selected() {
-            Some(i) => Some(if i >= self.rank_list.read().unwrap().len() - 1 {
+            Some(i) => Some(if i >= self.rank_list.read().unwrap()[self.tabs_index].len() - 1 {
                 0
             } else {
                 i + 1
             }),
             None => {
-                if self.rank_list.read().unwrap().len() == 0 {
+                if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
                     None
                 } else {
                     Some(0)
@@ -93,12 +94,12 @@ impl<'a> RankState<'a> {
     fn list_prev(&mut self) {
         let i = match self.rank_list_state.selected() {
             Some(i) => Some(if i == 0 {
-                self.rank_list.read().unwrap().len() - 1
+                self.rank_list.read().unwrap()[self.tabs_index].len() - 1
             } else {
                 i - 1
             }),
             None => {
-                if self.rank_list.read().unwrap().len() == 0 {
+                if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
                     None
                 } else {
                     Some(0)
@@ -110,26 +111,29 @@ impl<'a> RankState<'a> {
     }
 
     fn get_data(&mut self) {
+        let rank_list_clone = self.rank_list.clone();
+        let rank_type = parse_agrs_type(self.tabs[self.tabs_index]);
+        let tab_index = self.tabs_index.clone();
+
         self.rank_list_state.select(Some(0));
-        for task in &self.queue {
+        
+        for task in &self.queue[tab_index] {
             task.abort();
         }
 
-        let rank_list_clone = self.rank_list.clone();
-        let rank_type = parse_agrs_type(self.tabs[self.tabs_index]);
 
         let task = tokio::spawn(async move {
-            rank_list_clone.write().unwrap().clear();
+            rank_list_clone.write().unwrap()[tab_index].clear();
             let mut rank = x_pixiv_lib::rank::Rank::new(rank_type, false, 1..500);
             while let Some(content) = rank.next().await.unwrap() {
                 rank_list_clone
                     .write()
-                    .unwrap()
+                    .unwrap()[tab_index]
                     .push(ArtworkInfo::new(content));
             }
         });
 
-        self.queue.push(task);
+        self.queue[tab_index].push(task);
     }
 }
 
@@ -173,7 +177,7 @@ impl<'a> Compose for RankState<'a> {
         let list = List::new(
             self.rank_list
                 .read()
-                .unwrap()
+                .unwrap()[self.tabs_index]
                 .iter()
                 .enumerate()
                 .map(|(index, info)| {
@@ -203,7 +207,9 @@ impl<'a> Compose for RankState<'a> {
                     Span::raw(" download selected | "),
                     Span::styled("A", red_style),
                     Span::raw("ll "),
-                    Span::raw("download"),
+                    Span::raw("download | "),
+                    Span::styled("R", red_style),
+                    Span::raw("eload list")
                 ])),
         )
         .style(Style::default().add_modifier(Modifier::BOLD))
@@ -226,25 +232,30 @@ impl<'a> Compose for RankState<'a> {
         match event {
             Event::Key(key_event) => match key_event.code {
                 KeyCode::Tab => {
-                    self.get_data();
                     self.tabs_next();
+                    if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
+                        self.get_data();
+                    }
                 }
                 KeyCode::BackTab => {
-                    self.get_data();
                     self.tabs_prev();
+                    if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
+                        self.get_data();
+                    }
                 }
                 KeyCode::Enter => {
                     let index = self.rank_list_state.selected().unwrap();
                     let rank_list = self.rank_list.clone();
-                    let id = rank_list.read().unwrap()[index].content.illust_id;
+                    let tab_index = self.tabs_index.clone();
+                    let id = rank_list.read().unwrap()[tab_index][index].content.illust_id;
 
-                    rank_list.write().unwrap()[index].downloading = true;
+                    rank_list.write().unwrap()[tab_index][index].downloading = true;
 
                     tokio::spawn(async move {
                         if (download(id, download_queue, config).await).is_err() {
-                            rank_list.write().unwrap()[index].error = true;
+                            rank_list.write().unwrap()[tab_index][index].error = true;
                         };
-                        rank_list.write().unwrap()[index].downloading = false;
+                        rank_list.write().unwrap()[tab_index][index].downloading = false;
                     });
                 }
                 KeyCode::Down => self.list_next(),
@@ -252,18 +263,22 @@ impl<'a> Compose for RankState<'a> {
                 KeyCode::Char('a') => {
                     let clone_len = self.rank_list.read().unwrap().len();
                     let rank_list = self.rank_list.clone();
+                    let tab_index = self.tabs_index.clone();
 
                     tokio::spawn(async move {
                         for i in 0..clone_len {
-                            rank_list.write().unwrap()[i].downloading = true;
-                            let id = rank_list.read().unwrap()[i].content.illust_id;
+                            rank_list.write().unwrap()[tab_index][i].downloading = true;
+                            let id = rank_list.read().unwrap()[tab_index][i].content.illust_id;
                             if (download(id, download_queue.clone(), config.clone()).await).is_err()
                             {
-                                rank_list.write().unwrap()[i].error = true;
+                                rank_list.write().unwrap()[tab_index][i].error = true;
                             };
-                            rank_list.write().unwrap()[i].downloading = false;
+                            rank_list.write().unwrap()[tab_index][i].downloading = false;
                         }
                     });
+                }
+                KeyCode::Char('r') => {
+                    self.get_data();
                 }
                 _ => {}
             },
