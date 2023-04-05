@@ -13,7 +13,7 @@ use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Spans, Span},
+    text::{Span, Spans},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Tabs},
     Frame,
 };
@@ -121,15 +121,11 @@ impl<'a> RankState<'a> {
         let task = tokio::spawn(async move {
             rank_list_clone.write().unwrap().clear();
             let mut rank = x_pixiv_lib::rank::Rank::new(rank_type, false, 1..500);
-            loop {
-                if let Some(content) = rank.next().await.unwrap() {
-                    rank_list_clone
-                        .write()
-                        .unwrap()
-                        .push(ArtworkInfo::new(content));
-                } else {
-                    break;
-                }
+            while let Some(content) = rank.next().await.unwrap() {
+                rank_list_clone
+                    .write()
+                    .unwrap()
+                    .push(ArtworkInfo::new(content));
             }
         });
 
@@ -152,7 +148,7 @@ impl<'a> Compose for RankState<'a> {
         let tabs = Tabs::new(
             self.tabs
                 .iter()
-                .map(|tab| Spans::from(tab.clone()))
+                .map(|tab| Spans::from(<&str>::clone(tab)))
                 .collect(),
         )
         .select(self.tabs_index)
@@ -240,7 +236,7 @@ impl<'a> Compose for RankState<'a> {
                     rank_list.write().unwrap()[index].downloading = true;
 
                     tokio::spawn(async move {
-                        if let Err(_) = download(id, download_queue).await {
+                        if (download(id, download_queue).await).is_err() {
                             rank_list.write().unwrap()[index].error = true;
                         };
                         rank_list.write().unwrap()[index].downloading = false;
@@ -249,14 +245,14 @@ impl<'a> Compose for RankState<'a> {
                 KeyCode::Down => self.list_next(),
                 KeyCode::Up => self.list_prev(),
                 KeyCode::Char('a') => {
-                    let clone_len = self.rank_list.read().unwrap().len().clone();
+                    let clone_len = self.rank_list.read().unwrap().len();
                     let rank_list = self.rank_list.clone();
 
                     tokio::spawn(async move {
                         for i in 0..clone_len {
                             rank_list.write().unwrap()[i].downloading = true;
                             let id = rank_list.read().unwrap()[i].content.illust_id;
-                            if let Err(_) = download(id, download_queue.clone()).await {
+                            if (download(id, download_queue.clone()).await).is_err() {
                                 rank_list.write().unwrap()[i].error = true;
                             };
                             rank_list.write().unwrap()[i].downloading = false;

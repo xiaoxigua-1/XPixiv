@@ -1,14 +1,14 @@
 mod artwork;
 mod compose;
+mod config;
 mod data;
 mod rank;
 mod user;
 mod util;
-mod config;
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Stdout, Read, Write};
+use std::io::{Read, Stdout, Write};
 use std::sync::{Arc, Mutex};
 
 use crate::tui_util::compose::Compose;
@@ -36,7 +36,7 @@ pub struct AppState<'a> {
     pub focus: bool,
     download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
     config: Config,
-    pub config_open: bool
+    pub config_open: bool,
 }
 
 impl<'a> AppState<'a> {
@@ -49,7 +49,7 @@ impl<'a> AppState<'a> {
         let config_data = if let Ok(mut file) = File::open("./config.toml") {
             let mut content = String::new();
             file.read_to_string(&mut content).unwrap();
-            toml::from_str::<ConfigData>(&content).unwrap() 
+            toml::from_str::<ConfigData>(&content).unwrap()
         } else {
             let mut file = File::create("./config.toml").unwrap();
             let config_data = ConfigData::default();
@@ -64,7 +64,7 @@ impl<'a> AppState<'a> {
             contents: vec![rank_downloader_state, artwork_state, user_state],
             download_queue: Arc::new(Mutex::new(HashMap::new())),
             config: Config::new(config_data),
-            config_open: false
+            config_open: false,
         }
     }
 
@@ -116,10 +116,8 @@ impl<'a> AppState<'a> {
                     _ => {}
                 }
             }
-        } else {
-            if let Some(content) = self.contents.get_mut(self.menu_state.selected().unwrap()) {
-                content.update(event, self.download_queue.clone());
-            }
+        } else if let Some(content) = self.contents.get_mut(self.menu_state.selected().unwrap()) {
+            content.update(event, self.download_queue.clone());
         }
     }
 

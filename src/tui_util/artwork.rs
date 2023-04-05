@@ -66,7 +66,7 @@ impl Compose for ArtworkDownloaderState {
             match code.code {
                 KeyCode::Char(c) => {
                     *self.error.lock().unwrap() = false;
-                    if ('0'..'9').contains(&c) {
+                    if c.is_ascii_digit() {
                         self.input.push(c);
                     }
                 }
@@ -79,7 +79,7 @@ impl Compose for ArtworkDownloaderState {
                     };
                     let clone_error = self.error.clone();
                     tokio::spawn(async move {
-                        if let Err(_) = download(id, download_queue).await {
+                        if (download(id, download_queue).await).is_err() {
                             *clone_error.lock().unwrap() = true;
                         };
                     });

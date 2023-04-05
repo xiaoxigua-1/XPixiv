@@ -12,7 +12,7 @@ pub async fn download(
     download_id: usize,
     download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
 ) -> x_pixiv_lib::Result<()> {
-    let data = get_artworks_data(download_id.clone()).await?;
+    let data = get_artworks_data(download_id).await?;
     let mut queue = HashMap::new();
 
     for (index, url) in data.images.iter().enumerate() {
@@ -22,7 +22,7 @@ pub async fn download(
         let info = DownloadInfo::new(data.title.clone());
         let id = Uuid::new_v4();
 
-        download_queue.lock().unwrap().insert(id.clone(), info);
+        download_queue.lock().unwrap().insert(id, info);
 
         let task = tokio::spawn(downloader(
             path.join(file_name),

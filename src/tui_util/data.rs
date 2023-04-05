@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 pub struct DownloadInfo {
@@ -28,7 +28,7 @@ impl Default for ConfigData {
     fn default() -> Self {
         Self {
             output: "./images".to_string(),
-            group_type: None
+            group_type: None,
         }
     }
 }

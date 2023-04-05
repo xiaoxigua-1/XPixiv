@@ -6,8 +6,8 @@ use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
     text::{Span, Spans},
+    widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
 use uuid::Uuid;
@@ -32,10 +32,7 @@ struct ArtworkInfo {
 
 impl ArtworkInfo {
     fn new(id: usize) -> Self {
-        Self {
-            id,
-            error: false,
-        }
+        Self { id, error: false }
     }
 }
 
@@ -65,7 +62,7 @@ impl UserDownloaderState {
             let mut write = clone_user_artworks.write().unwrap();
 
             write.clear();
-            write.append(&mut ids.iter().map(|id| ArtworkInfo::new(id.clone())).collect());
+            write.append(&mut ids.iter().map(|id| ArtworkInfo::new(*id)).collect());
         });
     }
 
@@ -181,16 +178,16 @@ impl Compose for UserDownloaderState {
             match code.code {
                 KeyCode::Char(c) => {
                     *self.error.lock().unwrap() = false;
-                    if ('0'..'9').contains(&c) && self.artowrks_state.selected().is_none() {
+                    if c.is_ascii_digit() && self.artowrks_state.selected().is_none() {
                         self.input.push(c);
                     } else if c == 'a' {
                         let artworks = self.artworks.clone();
-                        let len = self.artworks.read().unwrap().len().clone();
+                        let len = self.artworks.read().unwrap().len();
 
                         tokio::spawn(async move {
                             for i in 0..len {
-                                let id = artworks.read().unwrap()[i].id.clone();
-                                if let Err(_) = download(id, download_queue.clone()).await {
+                                let id = artworks.read().unwrap()[i].id;
+                                if (download(id, download_queue.clone()).await).is_err() {
                                     artworks.write().unwrap()[i].error = true;
                                 } else {
                                     artworks.write().unwrap()[i].error = false;
@@ -204,10 +201,10 @@ impl Compose for UserDownloaderState {
                 }
                 KeyCode::Enter => {
                     if let Some(i) = self.artowrks_state.selected() {
-                        let id = self.artworks.read().unwrap()[i].id.clone();
+                        let id = self.artworks.read().unwrap()[i].id;
                         let artworks = self.artworks.clone();
                         tokio::spawn(async move {
-                            if let Err(_) = download(id, download_queue).await {
+                            if (download(id, download_queue).await).is_err() {
                                 artworks.write().unwrap()[i].error = true;
                             };
                         });

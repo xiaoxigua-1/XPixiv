@@ -177,7 +177,7 @@ pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
             }
 
             for task in download_qu {
-                if let Err(_) = task.await {};
+                if (task.await).is_err() {};
             }
         } else {
             break;
@@ -233,7 +233,7 @@ pub async fn user_download(args: &UserArgs) -> x_pixiv_lib::Result<()> {
     for id in image_ids {
         let data = get_artworks_data(id).await?;
         let group_path = if args.is_group {
-            output_path.join(format!("{}", data.title))
+            output_path.join(&data.title)
         } else {
             output_path.clone()
         };
