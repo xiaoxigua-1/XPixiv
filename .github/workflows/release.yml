@@ -78,6 +78,7 @@ jobs:
         with:
           command: deb
           args: --no-build --no-strip --output=. --target=${{ matrix.target }}
+          use-cross: ${{ runner.os == 'Linux' }}
 
       - name: Package (*nix)
         if: runner.os != 'Windows'
