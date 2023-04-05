@@ -27,14 +27,14 @@ pub struct UserDownloaderState {
 
 struct ArtworkInfo {
     id: usize,
-    error: Arc<RwLock<bool>>,
+    error: bool,
 }
 
 impl ArtworkInfo {
     fn new(id: usize) -> Self {
         Self {
             id,
-            error: Arc::new(RwLock::new(false)),
+            error: false,
         }
     }
 }
@@ -143,7 +143,7 @@ impl Compose for UserDownloaderState {
                 .iter()
                 .map(|item| {
                     ListItem::new(format!("https://www.pixiv.net/artworks/{}", item.id)).style(
-                        if *item.error.read().unwrap() {
+                        if item.error {
                             Style::default().bg(Color::Red)
                         } else {
                             Style::default()
@@ -191,9 +191,9 @@ impl Compose for UserDownloaderState {
                             for i in 0..len {
                                 let id = artworks.read().unwrap()[i].id.clone();
                                 if let Err(_) = download(id, download_queue.clone()).await {
-                                    *artworks.write().unwrap()[i].error.write().unwrap() = true;
+                                    artworks.write().unwrap()[i].error = true;
                                 } else {
-                                    *artworks.write().unwrap()[i].error.write().unwrap() = false;
+                                    artworks.write().unwrap()[i].error = false;
                                 };
                             }
                         });
@@ -208,7 +208,7 @@ impl Compose for UserDownloaderState {
                         let artworks = self.artworks.clone();
                         tokio::spawn(async move {
                             if let Err(_) = download(id, download_queue).await {
-                                *artworks.write().unwrap()[i].error.write().unwrap() = true;
+                                artworks.write().unwrap()[i].error = true;
                             };
                         });
                     } else {
