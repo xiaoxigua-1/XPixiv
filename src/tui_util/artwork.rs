@@ -11,6 +11,7 @@ use tui::{
 use uuid::Uuid;
 
 use super::compose::Compose;
+use super::data::ConfigData;
 use super::util::download;
 use crate::tui_util::data::DownloadInfo;
 use crossterm::event::KeyCode;
@@ -61,6 +62,7 @@ impl Compose for ArtworkDownloaderState {
         &mut self,
         event: &crossterm::event::Event,
         download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
+        config: ConfigData
     ) {
         if let Event::Key(code) = event {
             match code.code {
@@ -79,7 +81,7 @@ impl Compose for ArtworkDownloaderState {
                     };
                     let clone_error = self.error.clone();
                     tokio::spawn(async move {
-                        if (download(id, download_queue).await).is_err() {
+                        if (download(id, download_queue, config).await).is_err() {
                             *clone_error.lock().unwrap() = true;
                         };
                     });

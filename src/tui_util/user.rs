@@ -14,6 +14,7 @@ use uuid::Uuid;
 use x_pixiv_lib::user::User;
 
 use super::compose::Compose;
+use super::data::ConfigData;
 use super::util::download;
 use crate::tui_util::data::DownloadInfo;
 use crossterm::event::KeyCode;
@@ -173,7 +174,7 @@ impl Compose for UserDownloaderState {
         f.render_stateful_widget(list, check[1], &mut self.artowrks_state);
     }
 
-    fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
+    fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>, config: ConfigData) {
         if let Event::Key(code) = event {
             match code.code {
                 KeyCode::Char(c) => {
@@ -183,11 +184,12 @@ impl Compose for UserDownloaderState {
                     } else if c == 'a' {
                         let artworks = self.artworks.clone();
                         let len = self.artworks.read().unwrap().len();
+                            
 
                         tokio::spawn(async move {
                             for i in 0..len {
                                 let id = artworks.read().unwrap()[i].id;
-                                if (download(id, download_queue.clone()).await).is_err() {
+                                if (download(id, download_queue.clone(), config.clone()).await).is_err() {
                                     artworks.write().unwrap()[i].error = true;
                                 } else {
                                     artworks.write().unwrap()[i].error = false;
@@ -204,7 +206,7 @@ impl Compose for UserDownloaderState {
                         let id = self.artworks.read().unwrap()[i].id;
                         let artworks = self.artworks.clone();
                         tokio::spawn(async move {
-                            if (download(id, download_queue).await).is_err() {
+                            if (download(id, download_queue, config).await).is_err() {
                                 artworks.write().unwrap()[i].error = true;
                             };
                         });

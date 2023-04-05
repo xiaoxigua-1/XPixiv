@@ -1,4 +1,4 @@
-use super::util::download;
+use super::{util::download, data::ConfigData};
 use crate::cli::parse_agrs_type;
 use crate::tui_util::compose::Compose;
 use crate::tui_util::data::DownloadInfo;
@@ -217,7 +217,7 @@ impl<'a> Compose for RankState<'a> {
         f.render_widget(tabs, check[0]);
     }
 
-    fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>) {
+    fn update(&mut self, event: &Event, download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>, config: ConfigData) {  
         match event {
             Event::Key(key_event) => match key_event.code {
                 KeyCode::Tab => {
@@ -236,7 +236,7 @@ impl<'a> Compose for RankState<'a> {
                     rank_list.write().unwrap()[index].downloading = true;
 
                     tokio::spawn(async move {
-                        if (download(id, download_queue).await).is_err() {
+                        if (download(id, download_queue, config).await).is_err() {
                             rank_list.write().unwrap()[index].error = true;
                         };
                         rank_list.write().unwrap()[index].downloading = false;
@@ -252,7 +252,7 @@ impl<'a> Compose for RankState<'a> {
                         for i in 0..clone_len {
                             rank_list.write().unwrap()[i].downloading = true;
                             let id = rank_list.read().unwrap()[i].content.illust_id;
-                            if (download(id, download_queue.clone()).await).is_err() {
+                            if (download(id, download_queue.clone(), config.clone()).await).is_err() {
                                 rank_list.write().unwrap()[i].error = true;
                             };
                             rank_list.write().unwrap()[i].downloading = false;

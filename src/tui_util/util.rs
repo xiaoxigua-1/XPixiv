@@ -6,11 +6,12 @@ use std::{
 use uuid::Uuid;
 use x_pixiv_lib::{artworks::get_artworks_data, downloader::downloader};
 
-use super::data::DownloadInfo;
+use super::data::{DownloadInfo, ConfigData};
 
 pub async fn download(
     download_id: usize,
     download_queue: Arc<Mutex<HashMap<Uuid, DownloadInfo>>>,
+    config: ConfigData
 ) -> x_pixiv_lib::Result<()> {
     let data = get_artworks_data(download_id).await?;
     let mut queue = HashMap::new();
@@ -18,7 +19,7 @@ pub async fn download(
     for (index, url) in data.images.iter().enumerate() {
         let update_download_progress = download_queue.clone();
         let file_name = format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]);
-        let path = PathBuf::from("./images/");
+        let path = PathBuf::from(config.output.clone());
         let info = DownloadInfo::new(data.title.clone());
         let id = Uuid::new_v4();
 

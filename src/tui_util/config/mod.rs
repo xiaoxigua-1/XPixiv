@@ -19,17 +19,23 @@ use tui::{
 };
 
 pub struct Config {
-    config_data: ConfigData,
+    pub config_data: ConfigData,
     state: ConfigState,
     config_items: Arc<Mutex<Vec<Box<dyn ConfigItem>>>>,
 }
 
 impl Config {
     pub fn new(config_data: ConfigData) -> Self {
+        let mut config_items: Vec<Box<dyn ConfigItem>> = vec![OutputConfig::new()];
+
+        config_items.iter_mut().for_each(|item| {
+            item.init(&config_data);
+        });
+
         Self {
             config_data,
             state: ConfigState::new(),
-            config_items: Arc::new(Mutex::new(vec![OutputConfig::new()])),
+            config_items: Arc::new(Mutex::new(config_items)),
         }
     }
 
@@ -61,6 +67,16 @@ impl Config {
 
         f.render_widget(Clear, content_rect);
         f.render_widget(block, rect);
+
+        for (i, item) in self.config_items.lock().unwrap().iter().enumerate() {
+            let item_rect = Rect {
+                x: content_rect.x + i as u16 * 3,
+                y: content_rect.y,
+                width: content_rect.width,
+                height: 3,
+            };
+            item.render(item_rect, f, self.state.selected() == i);
+        }
     }
 
     pub fn update(&mut self, event: &Event) {
@@ -107,7 +123,9 @@ impl Default for Config {
 }
 
 trait ConfigItem {
-    fn render(&self);
+    fn init(&mut self, config_data: &ConfigData);
+
+    fn render(&self, area: Rect, f: &mut Frame<CrosstermBackend<Stdout>>, forcu: bool);
 
     fn update(&mut self, config: &mut ConfigData, event: Event);
 }

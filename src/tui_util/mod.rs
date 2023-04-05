@@ -8,7 +8,7 @@ mod util;
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Read, Stdout, Write};
+use std::io::{Read, Stdout};
 use std::sync::{Arc, Mutex};
 
 use crate::tui_util::compose::Compose;
@@ -51,11 +51,7 @@ impl<'a> AppState<'a> {
             file.read_to_string(&mut content).unwrap();
             toml::from_str::<ConfigData>(&content).unwrap()
         } else {
-            let mut file = File::create("./config.toml").unwrap();
-            let config_data = ConfigData::default();
-            let toml_str = toml::to_string(&config_data).unwrap();
-            file.write_all(toml_str.as_bytes()).unwrap();
-            config_data
+            ConfigData::default().save()
         };
         Self {
             menu,
@@ -117,7 +113,7 @@ impl<'a> AppState<'a> {
                 }
             }
         } else if let Some(content) = self.contents.get_mut(self.menu_state.selected().unwrap()) {
-            content.update(event, self.download_queue.clone());
+            content.update(event, self.download_queue.clone(), self.config.config_data.clone());
         }
     }
 
