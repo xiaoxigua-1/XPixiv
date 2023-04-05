@@ -13,7 +13,7 @@ use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::Spans,
+    text::{Spans, Span},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Tabs},
     Frame,
 };
@@ -144,6 +144,7 @@ impl<'a> Compose for RankState<'a> {
         } else {
             Style::default().fg(Color::DarkGray)
         };
+        let red_style = Style::default().fg(Color::Red);
         let check = Layout::default()
             .direction(tui::layout::Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
@@ -158,7 +159,11 @@ impl<'a> Compose for RankState<'a> {
         .style(Style::default())
         .block(
             Block::default()
-                .title(format!("{} rank list(Tab)", self.tabs[self.tabs_index]))
+                .title(Spans::from(vec![
+                    Span::raw(format!("{} rank list (", self.tabs[self.tabs_index])),
+                    Span::styled("Tab", red_style),
+                    Span::raw(")"),
+                ]))
                 .borders(Borders::ALL)
                 .border_style(border_style)
                 .border_type(BorderType::Rounded),
@@ -197,7 +202,13 @@ impl<'a> Compose for RankState<'a> {
                 .borders(Borders::ALL)
                 .border_style(border_style)
                 .border_type(BorderType::Rounded)
-                .title("(Enter download selected) (`a` download all)"),
+                .title(Spans::from(vec![
+                    Span::styled("Enter", red_style),
+                    Span::raw(" download selected | "),
+                    Span::styled("A", red_style),
+                    Span::raw("ll "),
+                    Span::raw("download"),
+                ])),
         )
         .style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_style(

@@ -7,6 +7,7 @@ use tui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph},
+    text::{Span, Spans},
     Frame,
 };
 use uuid::Uuid;
@@ -156,7 +157,13 @@ impl Compose for UserDownloaderState {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(focus_style)
-                .title("(Enter download selected) (`a` download all)"),
+                .title(Spans::from(vec![
+                    Span::styled("Enter", Style::default().fg(Color::Red)),
+                    Span::raw(" download selected | "),
+                    Span::styled("A", Style::default().fg(Color::Red)),
+                    Span::raw("ll "),
+                    Span::raw("download"),
+                ])),
         )
         .highlight_style(Style::default().bg(Color::Gray));
 
