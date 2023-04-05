@@ -4,7 +4,7 @@ use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect, Margin},
     widgets::{Block, Borders, Paragraph},
-    Frame,
+    Frame, style::{Style, Color}, text::{Spans, Span},
 };
 
 use crate::tui_util::data::ConfigData;
@@ -30,14 +30,18 @@ impl ConfigItem for OutputConfig {
         self.input = config_data.output.clone();
     }
 
-    fn render(&self, area: Rect, f: &mut Frame<CrosstermBackend<Stdout>>) {
+    fn render(&self, area: Rect, f: &mut Frame<CrosstermBackend<Stdout>>, forcu: bool) {
         let check = Layout::default()
             .constraints([Constraint::Percentage(20), Constraint::Percentage(80)])
             .direction(Direction::Horizontal)
             .split(area);
-        let config_name = Paragraph::new("Output Path");
+        let forcu_style = Style::default().fg(if forcu { Color::White } else { Color::DarkGray });
+        let config_name = Paragraph::new("Output Path").style(forcu_style);
         let input =
-            Paragraph::new(self.input.clone()).block(Block::default().borders(Borders::ALL));
+            Paragraph::new(self.input.clone()).block(Block::default().borders(Borders::ALL).style(forcu_style).title(Spans::from(vec![
+                Span::styled("Enter ", Style::default().fg(Color::Red)),
+                Span::raw(if !self.edit { "Edit" } else { "Save" })
+            ])));
 
         if self.edit {
             f.set_cursor(check[1].x + self.input.len() as u16 + 1, check[1].y + 1);
@@ -47,7 +51,7 @@ impl ConfigItem for OutputConfig {
         f.render_widget(input, check[1]);
     }
 
-    fn update(&mut self, config: &mut ConfigData, event: Event) {
+    fn update(&mut self, config: &mut ConfigData, event: &Event) {
         if let Event::Key(key) = event {
             match key.code {
                 KeyCode::Char(c) => {

@@ -74,7 +74,7 @@ fn tui() -> Result<(), io::Error> {
                 match key.code {
                     KeyCode::Char('q') => break,
                     _ => match key.code {
-                        KeyCode::Left | KeyCode::Right => app_state.focus = !app_state.focus,
+                        code if (code == KeyCode::Left || code == KeyCode::Right) && !app_state.config_open => app_state.focus = !app_state.focus,
                         KeyCode::Esc => app_state.config_open = !app_state.config_open,
                         _ => {}
                     },

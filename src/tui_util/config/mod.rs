@@ -1,6 +1,7 @@
 mod output;
+mod group;
 
-use self::output::OutputConfig;
+use self::{output::OutputConfig, group::GroupConfig};
 
 use super::data::ConfigData;
 
@@ -26,7 +27,7 @@ pub struct Config {
 
 impl Config {
     pub fn new(config_data: ConfigData) -> Self {
-        let mut config_items: Vec<Box<dyn ConfigItem>> = vec![OutputConfig::new()];
+        let mut config_items: Vec<Box<dyn ConfigItem>> = vec![OutputConfig::new(), GroupConfig::new()];
 
         config_items.iter_mut().for_each(|item| {
             item.init(&config_data);
@@ -70,11 +71,12 @@ impl Config {
 
         for (i, item) in self.config_items.lock().unwrap().iter().enumerate() {
             let item_rect = Rect {
-                x: content_rect.x + i as u16 * 3,
-                y: content_rect.y,
+                x: content_rect.x,
+                y: content_rect.y + i as u16 * 3,
                 width: content_rect.width,
                 height: 3,
             };
+
             item.render(item_rect, f, self.state.selected() == i);
         }
     }
@@ -91,7 +93,7 @@ impl Config {
         }
 
         config_items.lock().unwrap()[self.state.selected()]
-            .update(&mut self.config_data, event.clone());
+            .update(&mut self.config_data, event);
     }
 
     fn next(&mut self) {
@@ -127,7 +129,7 @@ trait ConfigItem {
 
     fn render(&self, area: Rect, f: &mut Frame<CrosstermBackend<Stdout>>, forcu: bool);
 
-    fn update(&mut self, config: &mut ConfigData, event: Event);
+    fn update(&mut self, config: &mut ConfigData, event: &Event);
 }
 
 pub struct ConfigState {

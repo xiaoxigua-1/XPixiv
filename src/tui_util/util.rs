@@ -6,7 +6,7 @@ use std::{
 use uuid::Uuid;
 use x_pixiv_lib::{artworks::get_artworks_data, downloader::downloader};
 
-use super::data::{DownloadInfo, ConfigData};
+use super::data::{DownloadInfo, ConfigData, GroupType};
 
 pub async fn download(
     download_id: usize,
@@ -19,9 +19,18 @@ pub async fn download(
     for (index, url) in data.images.iter().enumerate() {
         let update_download_progress = download_queue.clone();
         let file_name = format!("{}-{}.{}", data.title, index, &url[url.len() - 3..]);
-        let path = PathBuf::from(config.output.clone());
+        let mut path = PathBuf::from(config.output.clone());
         let info = DownloadInfo::new(data.title.clone());
         let id = Uuid::new_v4();
+
+        if let Some(group) = &config.group_type {
+            let group = match group {
+                GroupType::Artwork => format!("{}-{}/", data.title, download_id),
+                GroupType::Author => format!("{}/", data.user_name)
+            };
+
+            path.push(group);
+        }
 
         download_queue.lock().unwrap().insert(id, info);
 

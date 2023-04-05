@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write};
+use std::{fs::File, io::Write, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
@@ -41,5 +41,16 @@ impl Default for ConfigData {
             output: "./images".to_string(),
             group_type: None,
         }
+    }
+}
+
+impl Display for GroupType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use GroupType::*;
+
+        write!(f, "{}", match self {
+            Author => "author",
+            Artwork => "artwork"
+        })
     }
 }
