@@ -50,6 +50,7 @@ jobs:
         uses: hapakaien/archlinux-package-action@v2
         with:
           flags: '-g >> PKGBUILD'
+          namcap: false
           path: aur
 
       - name: Publish AUR package
