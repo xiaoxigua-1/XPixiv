@@ -39,7 +39,7 @@ jobs:
           arch=("x86_64")
           provides=("x-pixiv")
           conflicts=("x-pixiv")
-          source=("https://github.com/xiaoxigua-1/XPixiv/releases/download/v.${{ steps.get_version.outputs.value }}/x-pixiv-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz")
+          source_x86_64=("https://github.com/xiaoxigua-1/XPixiv/releases/download/v.${{ steps.get_version.outputs.value }}/x-pixiv-${{ steps.get_version.outputs.value }}-x86_64-unknown-linux-gnu.tar.gz")
 
           package() {
               install -Dm755 x-pixiv -t "$pkgdir/usr/bin"
