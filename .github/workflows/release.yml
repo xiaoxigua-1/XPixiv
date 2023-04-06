@@ -40,7 +40,6 @@ jobs:
           provides=("x-pixiv")
           conflicts=("x-pixiv")
           source=("https://github.com/xiaoxigua-1/XPixiv/releases/download/v.${{ steps.get_version.outputs.value }}/x-pixiv-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.tar.gz")
-          sha256sums=("fb5ee2ec48c5872747806d47a7e9818c2e55736cf2399139b93dc2674bda2fb9")
 
           package() {
               install -Dm755 x-pixiv -t "$pkgdir/usr/bin"
@@ -50,11 +49,8 @@ jobs:
       - name: Validate AUR package
         uses: hapakaien/archlinux-package-action@v2
         with:
-          flags: ''
+          flags: '-g > PKGBUILD'
           path: aur
-          namcap: true 
-          srcinfo: true
-          updpkgsums: true
 
       - name: Publish AUR package
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
