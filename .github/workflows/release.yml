@@ -112,17 +112,6 @@ jobs:
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           commit_message: Update AUR package
           ssh_keyscan_types: rsa,dsa,ecdsa,ed25519
-      - name: Publishing AUR
-        if: ${{ matrix.aur }}
-        run: |
-          cd aur
-          git init
-          git remote add origin ssh://aur@aur.archlinux.org/pkgbase.git
-          git fetch origin
-          git add PKGBUILD .SRCINFO
-          git commit -m "Update AUR package"
-          git push origin master
-          cd ..
       
       - name: Package (*nix)
         if: runner.os != 'Windows'
