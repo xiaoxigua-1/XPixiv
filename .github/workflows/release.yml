@@ -111,11 +111,11 @@ jobs:
           srcinfo: true
           updpkgsums: true
 
-      - name: ssh agent
+      - name: Install SSH Key
         if: ${{ matrix.aur }}
-        uses: webfactory/ssh-agent@v0.7.0
+        uses: shimataro/ssh-key-action@v2 
         with:
-            ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Publishing AUR
         if: ${{ matrix.aur }}
