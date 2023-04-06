@@ -107,7 +107,7 @@ jobs:
         with:
           flags: ''
           path: aur
-          namcap: false
+          namcap: true 
           srcinfo: true
           updpkgsums: true
 
