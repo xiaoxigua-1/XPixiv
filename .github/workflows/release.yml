@@ -100,6 +100,16 @@ jobs:
               install -Dm755 x-pixiv -t "$pkgdir/usr/bin"
               install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
           }' > aur/PKGBUILD
+     
+      - name: Validate AUR package
+        if: ${{ matrix.aur }}
+        uses: hapakaien/archlinux-package-action@v2
+        with:
+          flags: ''
+          path: aur
+          namcap: false
+          srcinfo: true
+          updpkgsums: true
 
       - name: Publish AUR package
         if: ${{ matrix.aur }}
