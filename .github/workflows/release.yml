@@ -49,8 +49,9 @@ jobs:
       - name: Validate AUR package
         uses: hapakaien/archlinux-package-action@v2
         with:
-          flags: '-g >> /github/workspace/aur/PKGBUILD'
+          flags: '-g'
           namcap: false
+          updpkgsums: true
           path: aur
 
       - name: cat
