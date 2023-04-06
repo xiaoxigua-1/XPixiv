@@ -101,23 +101,16 @@ jobs:
               install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
           }' > aur/PKGBUILD
 
-      - name: Validate AUR package
-        if: ${{ matrix.aur }}
-        uses: hapakaien/archlinux-package-action@v2
+      - name: Publish AUR package
+        uses: KSXGitHub/github-actions-deploy-aur@<TAG>
         with:
-          flags: ''
-          path: aur
-          namcap: false
-          srcinfo: true
-          updpkgsums: true
-
-      - name: Install SSH Key
-        if: ${{ matrix.aur }}
-        uses: shimataro/ssh-key-action@v2 
-        with:
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            known_hosts: 'aur.archlinux.org'
-
+          pkgname: x-pixiv-bin 
+          pkgbuild: ./aur/PKGBUILD
+          commit_username: xiaoxigua-1
+          commit_email: xigua@xigua.tw 
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          commit_message: Update AUR package
+          ssh_keyscan_types: rsa,dsa,ecdsa,ed25519
       - name: Publishing AUR
         if: ${{ matrix.aur }}
         run: |
