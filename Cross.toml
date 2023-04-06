@@ -1,5 +1,5 @@
 [target.aarch64-unknown-linux-gnu]
-pre-build = ["dpkg --add-architecture arm64", "apt-get update", "apt-get install --assume-yes libssl-dev:arm64"]
+pre-build = ["dpkg --add-architecture arm64", "apt update", "apt install --assume-yes libssl-dev:arm64"]
 
 [target.x86_64-unknown-linux-gnu]
-pre-build = ["apt-get update", "apt-get install --assume-yes libssl-dev"]
+pre-build = ["apt update", "apt install --assume-yes libssl-dev"]
