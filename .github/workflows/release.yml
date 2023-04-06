@@ -40,6 +40,7 @@ jobs:
           provides=("x-pixiv")
           conflicts=("x-pixiv")
           source_x86_64=("https://github.com/xiaoxigua-1/XPixiv/releases/download/v.${{ steps.get_version.outputs.value }}/x-pixiv-${{ steps.get_version.outputs.value }}-x86_64-unknown-linux-gnu.tar.gz")
+          depends=("openssl-1.0")
 
           package() {
               install -Dm755 x-pixiv -t "$pkgdir/usr/bin"
