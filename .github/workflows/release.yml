@@ -49,7 +49,7 @@ jobs:
       - name: Validate AUR package
         uses: hapakaien/archlinux-package-action@v2
         with:
-          flags: '-g'
+          flags: ''
           namcap: false
           updpkgsums: true
           path: aur
