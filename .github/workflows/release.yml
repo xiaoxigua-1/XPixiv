@@ -53,6 +53,9 @@ jobs:
           namcap: false
           path: aur
 
+      - name: cat
+        run: |
+          cat aur/PKGBUILD
       - name: Publish AUR package
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
