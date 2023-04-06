@@ -3,7 +3,6 @@ name = "x-pixiv"
 description = "Pixiv downloader"
 version = "0.1.6"
 edition = "2021"
-license-file = "LICENSE"
 repository = "https://github.com/xiaoxigua-1/XPixiv"
 readme = "README.md"
 keywords = ["pixiv", "downloader"]
