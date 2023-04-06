@@ -102,6 +102,7 @@ jobs:
           }' > aur/PKGBUILD
 
       - name: Publish AUR package
+        if: ${{ matrix.aur }}
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
         with:
           pkgname: x-pixiv-bin 
