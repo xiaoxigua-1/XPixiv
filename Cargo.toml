@@ -28,3 +28,6 @@ serde = "1"
 default = ["cli", "tui"]
 cli = []
 tui = []
+
+[package.metadata.deb]
+depends = "libssl-dev"
