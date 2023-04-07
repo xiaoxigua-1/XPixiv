@@ -30,4 +30,4 @@ cli = []
 tui = []
 
 [package.metadata.deb]
-depends = "libssl-dev"
+depends = "libssl1.1"
