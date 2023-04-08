@@ -133,7 +133,7 @@ pub async fn rank_downloader(args: &RankArgs) -> x_pixiv_lib::Result<()> {
             if let Some(group) = &args.path_group {
                 match group.as_str() {
                     "author" => path.push(&format!("{}/", images.user_name)),
-                    "title" => path.push(&format!("{}/", images.title)),
+                    "title" => path.push(&format!("{}-{}/", images.title, id.illust_id)),
                     _ => {}
                 }
             }
