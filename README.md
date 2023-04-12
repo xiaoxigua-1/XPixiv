@@ -37,6 +37,9 @@ sudo apt install ./x-pixiv_0.1.6_arm64.deb
 
 ## CLI
 Input `x-pixiv -h` show help.
-
+![image](./images/image3.png)
+![image](./images/image4.png)
 ## TUI
 Open x-pixiv
+![image](./images/image.png)
+![image](./images/image2.png)
