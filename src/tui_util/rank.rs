@@ -80,7 +80,7 @@ impl<'a> RankState<'a> {
                 i + 1
             }),
             None => {
-                if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
+                if self.rank_list.read().unwrap()[self.tabs_index].is_empty() {
                     None
                 } else {
                     Some(0)
@@ -99,7 +99,7 @@ impl<'a> RankState<'a> {
                 i - 1
             }),
             None => {
-                if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
+                if self.rank_list.read().unwrap()[self.tabs_index].is_empty() {
                     None
                 } else {
                     Some(0)
@@ -113,7 +113,7 @@ impl<'a> RankState<'a> {
     fn get_data(&mut self) {
         let rank_list_clone = self.rank_list.clone();
         let rank_type = parse_agrs_type(self.tabs[self.tabs_index]);
-        let tab_index = self.tabs_index.clone();
+        let tab_index = self.tabs_index;
 
         self.rank_list_state.select(Some(0));
         
@@ -233,20 +233,20 @@ impl<'a> Compose for RankState<'a> {
             Event::Key(key_event) => match key_event.code {
                 KeyCode::Tab => {
                     self.tabs_next();
-                    if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
+                    if self.rank_list.read().unwrap()[self.tabs_index].is_empty() {
                         self.get_data();
                     }
                 }
                 KeyCode::BackTab => {
                     self.tabs_prev();
-                    if self.rank_list.read().unwrap()[self.tabs_index].len() == 0 {
+                    if self.rank_list.read().unwrap()[self.tabs_index].is_empty() {
                         self.get_data();
                     }
                 }
                 KeyCode::Enter => {
                     let index = self.rank_list_state.selected().unwrap();
                     let rank_list = self.rank_list.clone();
-                    let tab_index = self.tabs_index.clone();
+                    let tab_index = self.tabs_index;
                     let id = rank_list.read().unwrap()[tab_index][index].content.illust_id;
 
                     rank_list.write().unwrap()[tab_index][index].downloading = true;
@@ -263,7 +263,7 @@ impl<'a> Compose for RankState<'a> {
                 KeyCode::Char('a') => {
                     let clone_len = self.rank_list.read().unwrap().len();
                     let rank_list = self.rank_list.clone();
-                    let tab_index = self.tabs_index.clone();
+                    let tab_index = self.tabs_index;
 
                     tokio::spawn(async move {
                         for i in 0..clone_len {
