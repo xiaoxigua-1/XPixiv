@@ -261,9 +261,9 @@ impl<'a> Compose for RankState<'a> {
                 KeyCode::Down => self.list_next(),
                 KeyCode::Up => self.list_prev(),
                 KeyCode::Char('a') => {
-                    let clone_len = self.rank_list.read().unwrap().len();
                     let rank_list = self.rank_list.clone();
                     let tab_index = self.tabs_index;
+                    let clone_len = self.rank_list.read().unwrap()[tab_index].len();
 
                     tokio::spawn(async move {
                         for i in 0..clone_len {
