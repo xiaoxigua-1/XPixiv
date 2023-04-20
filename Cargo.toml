@@ -31,3 +31,9 @@ tui = []
 
 [package.metadata.deb]
 depends = "libssl1.1"
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
