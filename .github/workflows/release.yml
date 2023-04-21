@@ -69,8 +69,6 @@ jobs:
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           commit_message: Update AUR package
           ssh_keyscan_types: rsa,dsa,ecdsa,ed25519
-  rpm-release:
-    
 
   release:
     name: ${{ matrix.target }}
