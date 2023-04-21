@@ -172,7 +172,7 @@ jobs:
         with:
           name: ${{ matrix.target }}
           path: |
-            *.rpm
+            ./target/release/rpmbuild/RPMS/**/*.rpm
             *.deb
             *.tar.gz
             *.zip
