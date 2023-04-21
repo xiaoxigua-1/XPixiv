@@ -37,3 +37,12 @@ strip = true
 opt-level = "z"
 lto = true
 codegen-units = 1
+
+[package.metadata.rpm]
+package = "x-pixiv"
+
+[package.metadata.rpm.cargo]
+buildflags = ["--output", "."]
+
+[package.metadata.rpm.targets]
+x-pixiv = { path = "/usr/bin/x-pixiv" }
