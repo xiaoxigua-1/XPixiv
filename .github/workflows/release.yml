@@ -69,6 +69,7 @@ jobs:
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           commit_message: Update AUR package
           ssh_keyscan_types: rsa,dsa,ecdsa,ed25519
+
   release:
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
@@ -129,6 +130,13 @@ jobs:
         with:
           crate: cargo-deb
 
+
+      - name: Install cargo-rpm
+        if: runner.os == 'Linux'
+        uses: actions-rs/install@9da1d2adcfe5e7c16992e8242ca33a56b6d9b101 # v0.1.2
+        with:
+          crate: cargo-rpm
+
       - name: Build deb
         if: runner.os == 'Linux'
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
@@ -136,8 +144,15 @@ jobs:
           command: deb
           args: --no-build --no-strip --output=. --target=${{ matrix.target }}
           use-cross: ${{ runner.os == 'Linux' }}
-
       
+      - name: Build rpm
+        if: runner.os == 'Linux'
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
+        with:
+          command: rpm build
+          args: --no-build --no-strip --output=. --target=${{ matrix.target }}
+          use-cross: ${{ runner.os == 'Linux' }}
+
       - name: Package (*nix)
         if: runner.os != 'Windows'
         run: >
@@ -157,13 +172,14 @@ jobs:
         with:
           name: ${{ matrix.target }}
           path: |
+            *.rpm
             *.deb
             *.tar.gz
             *.zip
       - name: Create release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          draft: true
+          draft: false 
           files: |
             *.deb
             *.tar.gz
