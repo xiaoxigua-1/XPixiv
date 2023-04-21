@@ -167,12 +167,16 @@ jobs:
           7z a 'x-pixiv-${{ steps.get_version.outputs.value }}-${{ matrix.target }}.zip'
           LICENSE README.md
           ./target/${{ matrix.target }}/release/x-pixiv.exe
+      - name: Copy rpm file
+        if: runner.os == 'Linux'
+        run: >
+          cp ./target/release/rpmbuild/RPMS/**/*.rpm .
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.target }}
           path: |
-            ./target/release/rpmbuild/RPMS/**/*.rpm
+            *.rpm
             *.deb
             *.tar.gz
             *.zip
