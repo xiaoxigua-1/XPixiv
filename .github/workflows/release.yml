@@ -181,6 +181,7 @@ jobs:
         with:
           draft: false 
           files: |
+            *.rpm
             *.deb
             *.tar.gz
             *.zip
